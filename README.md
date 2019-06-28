@@ -4,10 +4,7 @@
 This program is written entirely in Python 3 and uses tkinter for graphics.
 
 For graphics we make extensive use of 2D homogeneous coordinate transformations with the help of the file src/homocoord.py:
-File excerpt:
-  # This file is part of the PyNCulture project, which aims at providing tools to
-  # easily generate complex neuronal cultures.
-  # Copyright (C) 2017 SENeC Initiative
+File excerpt.: This file is part of the PyNCulture project, which aims at providing tools to easily generate complex neuronal cultures.  Copyright (C) 2017 SENeC Initiative
 
 
 Facilitate game player in desiging and operation of two dimentional race track with two dimensional vehicles.
