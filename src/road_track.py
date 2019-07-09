@@ -52,16 +52,28 @@ class RoadTrack(BlockPanel):
         self.road_length = road_length
         self.surface = surface
         self.background = "lightgreen"
+
+
+    def add_entry(self, entry, origin="road_track"):
+        """ Add next entry
+        :entry: completed entry
+        :origin: origin of block, used to id starting point
+        """
+        entry.origin = origin
+        self.roads.append(entry)
+        self.id_blocks[entry.id] = entry
         
-    def add_roads(self, roads):
+    def add_road(self, roads):
         """ Add one or more road parts
         :roads: one or list of components
         """
         if not isinstance(roads, list):
             roads = [roads]
-        self.roads.extend(roads)
-
-    
+        for road in roads:
+            BlockBlock.id_blocks[road.id] = road
+            self.add_entry(road)
+            
+            
     def display(self):
         """ Display thing as a list of components
         """
@@ -71,6 +83,7 @@ class RoadTrack(BlockPanel):
         super().display()
         for road in self.roads:
             road.display()
+            
 
     def get_road_surface(self):
         return self.surface

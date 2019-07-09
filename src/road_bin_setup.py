@@ -27,7 +27,7 @@ class RoadBinSetup:
         entry_width = (1.-nentries*entry_space)/nentries
         entry_height = 1.-2*entry_space       # height of entry
         pos_inc = Pt(entry_space+entry_width, 0.)    # to next entry
-        pos = Pt(entry_space + entry_width/2, entry_space)  # HACK - Add extra  to move to right
+        pos = Pt(entry_space, entry_space)  # HACK - Add extra  to move to right
         entry = RoadStrait(self.road_bin,
                                  rotation=road_rot,
                                  position=pos,
@@ -37,24 +37,26 @@ class RoadBinSetup:
         self.add_entry(entry)
 
         
-        pos_turn = pos + Pt(entry_width+entry_space, .5)
+        pos_turn = Pt(pos.x+entry_width+entry_space, entry_space)
         radius_turn = entry_width
         rot_turn = road_rot
         entry = RoadTurn(self.road_bin,
-                                 arc=90.,
+                                 arc=-90.,
                                  rotation=rot_turn,
                                  position=pos_turn,
-                                 width=radius_turn,
-                                 height=radius_turn)
+                                 width=entry_width/2,
+                                 height=entry_height)
                                  
         SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
         self.add_entry(entry)
         pos += pos_inc
 
 
-    def add_entry(self, entry):
+    def add_entry(self, entry, origin="road_bin"):
         """ Add next entry
         :entry: completed entry
+        :origin: origin of block, used to id starting point
         """
-        self.road_bin.comps.append(entry)
+        entry.origin = origin
+        self.road_bin.add_entry(entry, origin=origin)
      

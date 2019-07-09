@@ -49,7 +49,7 @@ class RoadTurn(RoadBlock):
         """ Setup object
         :track: Track object, container and controller of the road system
         :radius: radius, as fraction of container, to outside of road
-                default: self.road_width
+                default: 1
         :arc: Amount, in degrees(counter clockwise), of circle default: 90 deg == left turn
         
         Create arc as polygon of points to facilitate coordinate transformation
@@ -60,35 +60,47 @@ class RoadTurn(RoadBlock):
         """
         super().__init__(track, road_type=RoadType.TURN, **kwargs)
         tag = self.tag
-        tag += "_turn"
-        road_width = self.get_road_width()
+        if self.width is None:
+            self.width = self.height = self.get_road_width()
         if radius is None:
             radius = self.width
-        if radius is None:
-            radius = road_width
         self.radius = radius
-        pos = self.position
         self.arc = arc
-        if arc >= 0:
-            arc_cent = pos
+        if arc <= 0:
+            arc_cent = Pt(0,0)
         else:
-            arc_cent = Pt(pos.x+radius, pos.y)
-        turn = BlockArc(container=self.container,
+            arc_cent = Pt(1,0)
+        turn = BlockArc(container=self,
                             tag=tag,
-                            rotation=self.rotation-90,
+                            ###rotation=self.rotation-90,
                             center=arc_cent,
-                            radius=radius,
+                            radius=1,
                             arc=arc,
                             xkwargs={'fill' : 'black'})
         self.comps.append(turn)
-
-
-
-    def get_top_left(self):
-        """ Get top left corner 
+        
+        
+    def get_arc(self):
+        """ Return turn arc
         """
-        if self.arc >= 0:
-            tlc = Pt(0,0)
-        else:
-            tlc = Pt(1,0)
-        return tlc
+        return self.arc
+    
+    
+    def new_arc(self, arc):
+        """ Change arc of turn
+         No change to selected state(s)
+        :arc: new arc
+        """
+        len_comps = len(self.comps)
+        if len_comps != 1:
+            raise SelectError("len(RoadTurn.comps)(%d) != expected(1)" % len_comps)
+        old_arc = self.comps[0]
+        old_arc.remove_display_objects()        # Remove old_arc from display
+        new_arc = BlockArc(container=self,
+                           tag=old_arc.tag,
+                            ###rotation=self.rotation-90,
+                            center=old_arc.center,
+                            radius=old_arc.radius,
+                            arc=arc,
+                            xkwargs=old_arc.xkwargs)
+        self.comps[0] = new_arc

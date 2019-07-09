@@ -25,100 +25,97 @@ class RoadTrackSetup:
         SlTrace.lg("road_track pts: %s" % self.road_track.get_absolute_points())
 
         road_rot = 0.
+        turn_arc = -90.
         road_width = road_track.get_road_width()
         road_length = road_track.get_road_length()       # height of entry
         pos_inc = Pt(0, road_length)    # to next entry
-        pos = Pt(.5, .5)
-        nstrait = 4
+        pos = Pt(1-2*road_width, 2*road_length)             # Right lower corner with a padding
+        nstrait = 8
+        origin = "road_track"
         for i in range(nstrait):                # Edge 1
             entry = RoadStrait(self.road_track,
                                      rotation=road_rot,
                                      position=pos,
-                                     width=road_width,
-                                     height=road_length)
-            SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
-            self.add_entry(entry)
+                                     origin=origin)
+            self.add_road(entry)
+            SlTrace.lg("Edge 1 entry(%d) %s: pts: %s" % (i, entry.get_tag_list(), entry.get_absolute_points()))
             pos = entry.get_top_left()
+            SlTrace.lg("Edge 1 pos(%d) %s: pts: %s" % (i, entry.get_tag_list(), self.road_track.get_absolute_point(pos)))
 
-        pos = entry.get_relative_point(Pt(0,0))
-        turn_fudge = Pt(-road_width/11, road_length/6)
-        pos = entry.get_top_left()+turn_fudge
         corner = RoadTurn(self.road_track,
-                                 arc=90.,
+                                 arc=turn_arc,
                                  rotation=road_rot,
-                                 position=pos)
-        SlTrace.lg("entry pts: %s" % corner.get_absolute_points())
-        self.add_entry(corner)
-        pos += pos_inc
-        
+                                 position=pos,
+                                 origin=origin)
+        SlTrace.lg("Edge 1 corner %s: pts: %s" % (corner.get_tag_list(), corner.get_absolute_points()))
+        self.add_road(corner)
+         
         road_rot += 90.
-        pos = entry.get_relative_point(Pt(0+.285,1.034))
+        pos = entry.get_top_left()
         for i in range(nstrait):                    # Edge 2
             entry = RoadStrait(self.road_track,
                                      rotation=road_rot,
-                                     position=pos,
-                                     width=road_width,
-                                     height=road_length)
-            SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
-            self.add_entry(entry)
+                                     position=pos,origin=origin)
+            self.add_road(entry)
+            SlTrace.lg("Edge 2 entry(%d) %s: pts: %s" % (i, entry.get_tag_list(), entry.get_absolute_points()))
             pos = entry.get_top_left()
-        pos = entry.get_relative_point(Pt(-.05,2.35))
+            SlTrace.lg("Edge 2 pos(%d) %s: pts: %s" % (i, entry.get_tag_list(), self.road_track.get_absolute_point(pos)))
         corner = RoadTurn(self.road_track,
-                                 arc=90.,
+                                 arc=turn_arc,
                                  rotation=road_rot,
-                                 position=pos)
-        SlTrace.lg("entry pts: %s" % corner.get_absolute_points())
-        self.add_entry(corner)
+                                 position=pos,origin=origin)
+        SlTrace.lg("Edge 2 corner pts: %s" % corner.get_absolute_points())
+        self.add_road(corner)
+        self.display()
+        
         pos += pos_inc
 
         road_rot += 90
-        pos = entry.get_relative_point(.15,2.05)         # left lower to left
+        pos = entry.get_top_left()         # left lower to left
         for i in range(nstrait):                        # Edge 3
             entry = RoadStrait(self.road_track,
                                      rotation=road_rot,
-                                     position=pos,
-                                     width=road_width,
-                                     height=road_length)
+                                     position=pos,origin=origin)
             SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
-            self.add_entry(entry)
+            self.add_road(entry)
             pos = entry.get_top_left()
 
-        pos = entry.get_relative_point(Pt(-.055, 1.15))
         corner = RoadTurn(self.road_track,
-                                 arc=90.,
+                                 arc=turn_arc,
                                  rotation=road_rot,
-                                 position=pos)
+                                 position=pos,origin=origin)
         SlTrace.lg("entry pts: %s" % corner.get_absolute_points())
-        self.add_entry(corner)
+        self.add_road(corner)
 
         road_rot += 90
-        pos = entry.get_relative_point(.34, 1)
+        pos = entry.get_top_left()
         for i in range(nstrait):                    # Edge 4
             entry = RoadStrait(self.road_track,
                                      rotation=road_rot,
-                                     position=pos,
-                                     width=road_width,
-                                     height=road_length)
+                                     position=pos,origin=origin)
             SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
-            self.add_entry(entry)
+            self.add_road(entry)
             pos = entry.get_top_left()
  
-        pos = entry.get_relative_point(Pt(-.045,2.37))
         corner = RoadTurn(self.road_track,
-                                 arc=90.,
+                                 arc=turn_arc,
                                  rotation=road_rot,
-                                 position=pos)
+                                 position=pos,origin=origin)
         SlTrace.lg("entry pts: %s" % corner.get_absolute_points())
-        self.add_entry(corner)
+        self.add_road(corner)
        
         
         if display:
-            self.road_track.display()
+            self.display()
             
+ 
+    def display(self):
+        self.road_track.display()
+        
 
-    def add_entry(self, entry):
+    def add_road(self, entry):
         """ Add next entry
         :entry: completed entry
         """
-        self.road_track.comps.append(entry)
+        self.road_track.add_road(entry)
         

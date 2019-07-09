@@ -49,10 +49,13 @@ class BlockText(BlockBlock):
         font_size = self.font_size
         if len(self.xkwargs) == 0:
             self.xkwargs['anchor'] = "sw"
-        self.text_tag = canvas.create_text(text_x, text_y,
+
+        self.remove_display_objects()    
+        tag = canvas.create_text(text_x, text_y,
                             font=(font_name, font_size),
                             text=text, **self.xkwargs) 
-       
+        self.store_tag(tag)
+        self.text_tag = tag 
         
     
         

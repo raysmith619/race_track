@@ -26,21 +26,22 @@ class RoadStrait(RoadBlock):
          """
         super().__init__(track, road_type=RoadType.STRAIT, **kwargs)
         if self.width is None:
-            self.width = self.road_width
+            self.width = self.get_road_width()
         if self.height is None:
-            self.height = self.road_width
-        strait = BlockPolygon(container=self.container,
+            self.height = self.get_road_length()
+        strait = BlockPolygon(container=self,
                             tag=self.tag,
-                            position=self.position,
-                            width=self.width,
-                            height=self.height,
-                            rotation=self.rotation,
+                            position=Pt(0,0),
+                            ###width=self.get_road_width(),
+                            ###height=self.get_road_length(),
+                            ###height=self.height,
+                            ###rotation=self.rotation,
                             ctype=BlockType.POLYGON,
                             points=[Pt(0,0), Pt(1,0), Pt(1,1), Pt(0,1)],
                             xkwargs={'fill' : 'black'})
         self.comps.append(strait)
 
-    
+        
     def display(self):
         """ Display thing as a list of components
         """

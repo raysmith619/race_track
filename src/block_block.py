@@ -7,6 +7,8 @@ from homcoord import *
 
 from select_trace import SlTrace
 from select_error import SelectError
+from wx.lib.sized_controls import border
+from _hashlib import new
 
 
 class BlockType(Enum):
@@ -50,8 +52,15 @@ class BlockBlock:
     When a BlockBlock moves/rotates The components move/rotate accordingly
     """
     id = 0
+    tagged_blocks = {}      # Displayed blocks, by canvas tag
+    id_blocks = {}          # Blocks by block id
 
-
+    @classmethod
+    def new_id(cls):
+        BlockBlock.id += 1
+        return BlockBlock.id
+    
+    
     @classmethod
     def get_xtran(self, comp):
         """ Get transformation of comp + containers
@@ -94,8 +103,75 @@ class BlockBlock:
             xft = Xlate(translate.xy)
             xtran = xtran.compose(xft)
         return xtran
+
+    
+    @classmethod
+    def get_transform(cls, block):
+        comp = block
+        comps = [comp]      # bottom ... top
+        while comp.container is not None:
+            comps.append(comp.container)
+            comp = comp.container
+        xtrans = []
+        for comp in comps:
+            xtrans.append(comp.base_xtran())
+        xtrans.reverse()        # Place top ... bottom
+        xtran = None
+        for xt in xtrans:   
+            if xtran is None:
+                xtran = xt
+            else:
+                xtran = xtran.compose(xt)
+        return xtran
+
+    ''' Trying Inv(A)*Inv()...
+    @classmethod
+    def get_transform_inverse(cls, block):
+        xtran = BlockBlock.get_transform(block)
+        if xtran is None:
+            return xtran        # No translation
+        
+        SlTrace.lg("xtran = %s" % tran2matrix(xtran))
+        
+        comp = block
+        comps = [comp]      # bottom ... top
+        while comp.container is not None:
+            comps.append(comp.container)
+            comp = comp.container
+        ixtrans = []
+        for comp in comps:
+            xtran =comp.base_xtran()
+            ixtran = xtran.inverse()
+            ixtrans.append(ixtran)
+        ###ixtrans.reverse()        # Place top ... bottom
+        ixtran = None
+        for ixt in ixtrans:   
+            if ixtran is None:
+                ixtran = ixt
+            else:
+                ixtran = ixtran.compose(ixt)
  
- 
+        SlTrace.lg("ixtran = %s" % tran2matrix(ixtran))
+        xtran_ti = xtran * ixtran
+        SlTrace.lg("xtran * ixtran=%s" % tran2matrix(xtran_ti))
+        return ixtran
+    '''
+    
+    @classmethod
+    def get_transform_inverse(cls, block):
+        xtran = BlockBlock.get_transform(block)
+        if xtran is None:
+            return xtran        # No translation
+        
+        SlTrace.lg("xtran = %s" % tran2matrix(xtran))
+        ixtran = xtran.inverse()
+        SlTrace.lg("ixtran = %s" % tran2matrix(ixtran))
+        xtran_ti = xtran * ixtran
+        SlTrace.lg("xtran * ixtran=%s" % tran2matrix(xtran_ti))
+        return ixtran
+    
+   
+   
     @classmethod
     def transform_points(cls, xtrans, points=None):
         """ Transform point/points via one or more transformations
@@ -137,6 +213,9 @@ class BlockBlock:
                  visible=True,
                  tag=None,
                  background=None,
+                 origin=None,
+                 selected=False,
+                 state=None,
                  xkwargs=None):
         """ Setup object
         :canvas: optional canvas argument - provides Canvas if no container
@@ -155,26 +234,30 @@ class BlockBlock:
         :visible:   visible iff container's visible default: seen
         :points:    points, used for this component
         :tag:    Optional identifier  default: class name
-        :background:  unused
+        :background:  background color, if asked
+        :origin:  Origin/local of block/object e.g. road_bin, road_track, car_bin
+        :selected: True iff object is selected default: False
+        :state:   State of object e.g. "new", "moved"
         :xkwargs:   optional canvas operation args (dictionary to avoid name
                                                     collisions)
         """
-        BlockBlock.id += 1
-        self.id = BlockBlock.id
+        self.canvas_tags = {}           # tags if any displayed
+        self.origin = origin            # Set by others
+        self.selected = False
+        self.state = state              # Set by others
+        self.id = BlockBlock.new_id()
         if tag is None:
             tag = self.__class__.__name__
         self.tag = tag
         self.canvas = canvas
-        if cv_width is not None:
-            self.cv_width = cv_width
-        if cv_height is not None:
-            self.cv_height = cv_height
-        self.canvas = canvas     
+        self.cv_width = cv_width
+        self.cv_height = cv_height
         self.container = container
         if background is None:
             background = "white"
+        self.background = background
         SlTrace.lg("\nBlockBlock[%d]:%s %s %s container: %s" % (self.id, tag, ctype, self, container))
-        SlTrace.lg("tag_list: %s" % self.get_tag_list())    
+        SlTrace.lg("tag_list: %s" % self.get_tag_list(), "block_create")    
         self.comps = []     # List of components
         self.ctype = ctype
 
@@ -200,7 +283,17 @@ class BlockBlock:
         self.xkwargs = xkwargs
         ###self.xtran = self.base_xtran()     # Setup this component's translation matrix
         ###self.xtran = BlockBlock.get_xtran(self)
- 
+
+
+    def __str__(self):
+        str_str = self.__class__.__name__ + " id:%s" % self.id
+        if hasattr(self, "origin") and self.origin is not None:
+            str_str += " in:%s" % self.origin
+        if hasattr(self, "state") and self.state is not None:
+            str_str += " state:%s" % self.state
+        return str_str
+    
+    
     def get_tag_list(self):
         """ List of tags from top container to this component
         """
@@ -218,8 +311,6 @@ class BlockBlock:
         """
         top = comp = self
         while comp.container is not None:
-            if hasattr(comp, "canvas") and hasattr(comp, "cv_width") and hasattr(comp, "cv_height"):
-                break       # stop when we get to canvas
             top = comp = comp.container
         return top
 
@@ -260,18 +351,18 @@ class BlockBlock:
         if not isinstance(points, list):
             points = [points] 
         comp = self
-        comps = [comp]
+        comps = [comp]      # bottom ... top
         while comp.container is not None:
             comps.append(comp.container)
             comp = comp.container
         if SlTrace.trace("short_points") and len(points) < 10:
-            SlTrace.lg("\nget_absolute_points(%s) comps:%s" % (points, self.get_tag_list()))
+            SlTrace.lg("\nget_absolute_points(%s) comps:%s" % (points, self.get_tag_list()), "get_absolute_points")
         elif SlTrace.trace("display_points"):            
-            SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.get_tag_list(), self.points))
+            SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.get_tag_list(), self.points), "get_absolute_points")
         xtrans = []
         for comp in comps:
             xtrans.append(comp.base_xtran())
-        xtrans.reverse()        # HACK ??
+        xtrans.reverse()        # Place top ... bottom
         abspts = BlockBlock.transform_points(xtrans, points)
         return abspts
     
@@ -280,14 +371,15 @@ class BlockBlock:
         for cp in comps:
             b_xtran = cp.base_xtran()
             if b_xtran is None:
-                SlTrace.lg("cp: %s     base_xtran: %s" % (cp.get_tag_list(), b_xtran))
+                SlTrace.lg("cp: %s     base_xtran: %s" % (cp.get_tag_list(), b_xtran), "get_absolute_points")
             else:
-                SlTrace.lg("cp: %s     base_xtran: %s" % (cp.get_tag_list(), b_xtran))
+                SlTrace.lg("cp: %s     base_xtran: %s" % (cp.get_tag_list(), b_xtran), "get_absolute_points")
                 cpx = cp
                 while cpx is not None:
-                    SlTrace.lg("                   %s: width=%.2f height=%.2f position=%s" % (cpx.tag, cpx.width, cpx.height, cpx.position))
+                    SlTrace.lg("                   %s: width=%.2f height=%.2f position=%s"
+                                % (cpx.tag, cpx.width, cpx.height, cpx.position), "get_absolute_points")
                     cpx = cpx.container
-                SlTrace.lg("                _m: %s" % tran2matrix(b_xtran))
+                SlTrace.lg("                _m: %s" % tran2matrix(b_xtran), "get_absolute_points")
             if b_xtran is not None:
                 if xtran is not None:
                     xtran = xtran.compose(b_xtran)
@@ -300,11 +392,38 @@ class BlockBlock:
         for point in points:
             pt = xtran.apply(point)
             pts.append(pt)
-        if SlTrace.trace("short_points"):
-            SlTrace.lg("\nabsolute_points(%s) comps:%s" % (pts[:10], self.get_tag_list()))
-        elif SlTrace.trace("display_points"):            
-            SlTrace.lg("\nabsolute points[%s]=%s" % (self.get_tag_list(), pts))
+        if SlTrace.trace("get_absolute_points"):
+            if SlTrace.trace("short_points"):
+                SlTrace.lg("\nabsolute_points(%s) comps:%s" % (pts[:10], self.get_tag_list()))
+            elif SlTrace.trace("display_points"):            
+                SlTrace.lg("\nabsolute points[%s]=%s" % (self.get_tag_list(), pts))
         return pts
+        
+        
+
+    def get_inverse_points(self, points=None):
+        """ Get points relative to container's coordinate system
+            based on absolute points
+        :points: absolute(canvas) point/points to translate
+                REQUIRED
+        :returns: list of relative points
+        """
+        if points is None:
+            raise SelectError("points, required, is missing")
+
+        if not isinstance(points, list):
+            points = [points]
+        xtran_inverse = self.get_full_ixtran() 
+        relpts = BlockBlock.transform_points(xtran_inverse, points)
+        return relpts
+        
+
+    def get_inverse_point(self, pt):
+        """ get single point, given an absolute point, relative to current position        :pt: current relative point
+        :returns: point in container's reference
+        """
+        pts = self.get_inverse_points(pt)
+        return pts[0]
         
 
     def get_absolute_point(self, pt):
@@ -315,6 +434,18 @@ class BlockBlock:
         pts = self.get_absolute_points(pt)
         return pts[0]
 
+
+    def get_full_xtran(self):
+        """ Get full transform from top level through this component
+        """
+        return BlockBlock.get_transform(self)
+
+
+    def get_full_ixtran(self):
+        """ Get full inverse transform from top level through this component
+        """
+        return BlockBlock.get_transform_inverse(self)
+    
 
     def get_relative_points(self, points=None):
         """ Get points based on current block position
@@ -346,16 +477,37 @@ class BlockBlock:
             pt_x = xtran.apply(pt)
             pts.append(pt_x)
         return pts
+
     
-    def get_relative_point(self, pt):
+    def get_relative_point(self, *ptxy):
         """ get single point relative to current position
-        :pt: current relative point
+        :ptxy: current relative point or xy pair
         :returns: point in container's reference
         """
+        if len(ptxy)== 1 and isinstance(ptxy[0], Pt):
+            pt = ptxy[0]
+        else:
+            pt = Pt(ptxy[0], ptxy[1])
         pts = self.get_relative_points(pt)
         return pts[0]
 
 
+    def get_top_left(self):
+        """ Get top left corner in container's  terms
+        so container can use next_entry(position=previous_entry.get_top_left()...) to place next_entry on
+        the top left of previous entry.
+        """
+        tlc = self.get_relative_point(Pt(0,1))
+        container = self.container if self.container is not None else self
+        SlTrace.lg("get_top_left %s = %s(%s)" % (self.get_tag_list(), tlc, self.container.get_absolute_point(tlc)))
+        return tlc
+
+
+    def get_top_right(self):
+        """ Get top left corner 
+        """
+        trc = self.get_relative_point(Pt(1,1))
+        return trc
     
     
     def get_canvas(self):
@@ -363,6 +515,7 @@ class BlockBlock:
         :returns: canvas, None if no canvas or top
         """
         top = self.get_top_container()
+        SlTrace.lg("get_canvas: top:%s selects:%s" % (top, top.selects))
         return top.canvas
     
     
@@ -370,7 +523,10 @@ class BlockBlock:
         """ Return canvas height (or projected height)
         """
         top = self.get_top_container()
-        return top.cv_height
+        cv_height = top.cv_height
+        if cv_height is None:
+            cv_height = 600
+        return cv_height
     
     
     def get_cv_width(self):
@@ -401,7 +557,7 @@ class BlockBlock:
             self.xtran is None if no translation
             self.xtran == translation for this component (before sub parts such as points)
         """
-        SlTrace.lg("\nbase_xtran: %s" % self)
+        SlTrace.lg("\nbase_xtran: %s" % self, "base_xtran")
         width = self.width
         if width is None:
             width = 1.
@@ -414,7 +570,7 @@ class BlockBlock:
             rotation = 0
         position = self.get_absolute_position()
         SlTrace.lg("base_xtran: %s translate=%s, rotate=%.1f, scale=(%.1f, %.1f)"
-                    % (self.tag, position, rotation, width, height))
+                    % (self.tag, position, rotation, width, height), "base_xtran")
         return BlockBlock.xtran(translate=position,
                                 rotate=rotation, scale=Pt(width,height))
         ''' Use class function
@@ -468,7 +624,29 @@ class BlockBlock:
             SlTrace.lg("    _m:%s" % tran2matrix(xtran))
         return xtran
         '''
+
+
+    def scale(self):
+        """ Return Pt(xscale, yscale) with relative scale from top
+        to this component
+        """
+        comp = self
+        comps = []                  # Scale through all containers
+        while comp.container is not None:
+            comps.insert(0, comp.container)
+            comp = comp.container
         
+        scale_x = 1.
+        scale_y = 1.
+        for comp in comps:
+            if comp.width is not None:
+                scale_x *= comp.width
+            if comp.height is not None:
+                scale_y *= comp.height
+        
+        return Pt(scale_x, scale_y)
+    
+    
     def update_xtran(self):
         """ Create this component's contribution
         to the translation:
@@ -519,23 +697,36 @@ class BlockBlock:
         for comp in comps:
             self.comps.append(comp)
 
+
+    def remove_display_objects(self):
+        """ Remove display objects associated with this component
+        but not those associated only with components
+        """
+        canvas = self.get_canvas()
+        for tg in list(self.canvas_tags.keys()):
+            SlTrace.lg("delete tag(%s) in %s" % (tg, self), "display")
+            canvas.delete(tg)
+            del BlockBlock.tagged_blocks[tg]
+            del self.canvas_tags[tg]
+       
     
     def display(self):
         """ Display thing as a list of components
         """
-        SlTrace.lg("tag_list: %s" % self.get_tag_list())
-        self.task_update()    
+        SlTrace.lg("tag_list: %s" % self.get_tag_list(), "display")
         if not self.visible:
-            SlTrace.lg("invisible %s: %s" % (self.ctype, self))
+            SlTrace.lg("invisible %s: %s" % (self.ctype, self), "display_invisible")
+            self.task_update()    
             return              # Skip if invisible
         
-        SlTrace.lg("display %s: %s" % (self.ctype, self))
+                                # Remove display objects associated with this component
+
+        SlTrace.lg("display %s: %s" % (self.ctype, self), "display")
         if self.ctype == BlockType.COMPOSITE:
             for comp in self.comps:
                 comp.display()
         else:
-            self.display_base()
-        self.task_update()    
+            raise SelectError("Unsupported display for %s" % self)
 
 
     def task_update(self):
@@ -546,69 +737,147 @@ class BlockBlock:
             canvas.update_idletasks()
             canvas.update()
 
-
-    def display_base(self):
-        """ display base type
+    def drag_block(self, delta_x=None, delta_y=None, canvas_coord=False):
+        """ Drag selected block, updating block status, and selected infor
+        :block: block to move, NOTE: all components will be automatically moved
+                                    by the same amount because they are all
+                                    defined within this block
+        :delta_x: relative x change from current x location in pixels
+        :delta_y: relative  y change from current y location in pixels
+        :canvas_coord: False - relative to container's coordinates
+                        True: relative to top container (canvas) coordinates y going down screen
         """
-        if self.ctype == BlockType.POLYGON:
-            self.display_polygon()
-        else:
-            raise SelectError("Unsupported base type %s" % self.ctype)
+        self.drag_position(delta_x=delta_x, delta_y=delta_y, canvas_coord=canvas_coord) 
+        ###self.display()
 
- 
-    def display_polygon(self):
-        """ Display polygon
-        The polygon consists of a list of points
-        whose position must be transformed though
-        the coordinates of each of the enclosing
-        components.
-        Each of the components, upon creation,
-        stored a translation matrix in .xtran.
-        
-        We will create a single translation matix
-        by composing the individual translation
-        matrixes from the top container.
+    def dup(self):
+        """ Duplicate block, replacing any kwargs
         """
-        SlTrace.lg("\ndisplay_polygon points[%s]=%s" % (self.tag, self.points))
-        SlTrace.lg("tag_list: %s" % self.get_tag_list())    
-        
-        if self.width is not None:
-            SlTrace.lg("width=%.1g" % self.width)
-        if self.height is not None:
-            SlTrace.lg("height=%.1g" % self.height)
-        if self.position is not None:
-            SlTrace.lg("position=%s" % self.position)
-        if self.rotation is not None:
-            SlTrace.lg("rotation=%.1fdeg" % self.rotation)
-        comp = self
-        comps = [comp]
-        while comp.container is not None:
-            comps.append(comp.container)
-            comp = comp.container
-        xtran = None
-        for cp in comps:
-            base_xtran = cp.base_xtran()
-            SlTrace.lg("cp: %s     base_xtran: %s" % (cp.get_tag_list(), base_xtran))
-            SlTrace.lg("              _m:%s" % tran2matrix(base_xtran))
+        duplicate = copy.deepcopy(self)
+        duplicate.id = BlockBlock.new_id()
+        return duplicate
 
-            if base_xtran is not None:
-                if xtran is not None:
-                    xtran = xtran.compose(base_xtran)
-                else:
-                    xtran = base_xtran
-            SlTrace.lg("xtran=%s" % xtran)
-        SlTrace.lg("_m:%s" % tran2matrix(xtran))
-        pts = []     # x1,y1, x2,y2, list
-        for point in self.points:
-            pt = xtran.apply(point)
-            pts.append(pt)
-        SlTrace.lg("create_polygon(points:%s" % (pts))
-        coords = self.pts2coords(pts)
-        SlTrace.lg("create_polygon(coords:%s, kwargs=%s" % (coords, self.xkwargs))
+    def __deepcopy__(self, memo):
+        """ Hook to avoid deep copy where not appropriate
+        """
+        new_inst = type(self).__new__(self.__class__)  # skips calling __init__
+        new_inst.canvas = self.canvas
+        new_inst.container = self.container
+        new_inst.state = self.state               # Set by others
+
+        new_inst.canvas_tags = {}           # tags if any displayed
+        new_inst.origin = self.origin
+        new_inst.id = self.id
+        new_inst.tag = self.tag
+        new_inst.canvas = self.canvas
+        new_inst.cv_width = self.cv_width
+        new_inst.cv_height = self.cv_height
+        new_inst.container = self.container
+        new_inst.background = self.background
+                        
+        new_inst.position = self.position
+        new_inst.width = self.width
+        new_inst.height = self.height
+        new_inst.velocity = self.velocity
+        new_inst.rotation = self.rotation        
+        new_inst.visible = self.visible
+        new_inst.xkwargs = self.xkwargs
+        
+        if hasattr(self, "comps"):
+            new_inst.comps = []
+            for comp in self.comps:
+                new_inst.comps.append(copy.deepcopy(comp, memo))
+        if hasattr(self, "roads"):
+            new_inst.roads = []
+            for comp in self.roads:
+                new_inst.roads.append(copy.deepcopy(comp, memo))
+                
+        return new_inst
+    
+    def drag_position(self, delta_x=None, delta_y=None, canvas_coord=False):
+        """ Reposition block position relative to block, using container settings
+            It's as if __init__ was called with ...position(Pt(x+delta_x, y+delta_y....)
+            :delta_x: change in x
+            :delta_y: change in y(down if canvas_coord is True
+            :canvas_coord: False (default) container coordinate system
+                            True use canvas coordinate system & scale(pixels) y is going down the screen
+        """
+        position = self.position
+        if position is None:
+            position = Pt(0,0)
+        if not canvas_coord:
+            self.position = Pt(position.x+delta_x, position.y+delta_y)
+            return
+        
+        ###abs_cur_pos = self.get_absolute_point(position)
+        ###abs_new_pos = Pt(abs_cur_pos.x+delta_x, abs_cur_pos.y+delta_y)
+        ###rel_new_pos = self.get_inverse_point(abs_new_pos)
+        
+        ### HACK based on general scale from current block to top
+        scale = self.scale()
+        rel_new_pos = Pt(position.x+delta_x/scale.x, position.y-delta_y/scale.y)
+        self.position = rel_new_pos
+
+    
+    def is_selected(self):
+        """ Check if selected or any in the container chain is
+        selected
+        """
+        top = self.get_top_container()
+        return top.is_selected(self)
+
+    
+
+    def store_tag(self, tag, keep_old=False):
+        """ Store canvas tag.
+        Save tag here to facilitate display object removal
+        Save tag to be a reference to our block
+        :tag: canvas tag to displayed element
+        :keep_old: Keep old tags, default delete old tags
+        """
         canvas = self.get_canvas()
-        canvas.create_polygon(coords, **self.xkwargs)
+        if canvas is None:
+            return                  # No canvas no display
+        
+        self.canvas_tags[tag] = tag
+                     
+        BlockBlock.tagged_blocks[tag] = self
+        SlTrace.lg("store_tag(%s) in %s" % (tag, self), "display")   
 
 
+    def get_canvas_tags(self, level=0, max_level=10):
+        """ Get tags from us and levels below us
+        :level: current level default 0
+        :max_level: maximum number of levels to go
+        """
+        tags = []
+        if level > max_level:
+            return []
+        
+        if hasattr(self, "canvas_tags"):
+            tags.extend(self.canvas_tags.keys())
+        if hasattr(self, "comps"):
+            for comp in self.comps:
+                comp_tags = comp.get_canvas_tags(level=level+1)
+                tags.extend(comp_tags)
+        if hasattr(self, "roads"):
+            for comp in self.roads:
+                comp_tags = comp.get_canvas_tags(level=level+1)
+                tags.extend(comp_tags)
+        return tags
+
+
+    def rotate(self, rotation=None):
+        """ Rotate object by an angle 
+        :rotation: rotation(REQUIRED) in degrees
+        """
+        rot = self.rotation
+        if rot is None:
+            rot = 0.
+        rot += rotation
+        self.rotation = rot
+        
+        
     def tran_points_to_coords(self, points, comp):
         """ Translate points from component to  coordinates
         for Canvas create_poligon
@@ -729,4 +998,41 @@ class BlockBlock:
             y = cv_height - y 
             coords.extend([x,y])
         return coords
+
+
+    def over_rect(self, point, rect=None):
+        """ Determine if point is on or inside rectangle
+        :point: point to check
+        :rect: list of points of rectangle default: self.points
+        """
+        if rect is None:
+            rect = self.points
+        
     
+    def over_us(self, point=None, coord=None, event=None):
+        """ Determine if any point, coordinate, or event is inside our border
+            First pass succeeds
+            :point: point (Pt)
+            :coord: coordinate pair
+            :event: mouse event
+        """
+        if point is not None:
+            if self.is_rect:
+                return self.over_rect(point)
+            
+            if self.is_arc:
+                return self.over_arc(point)
+            
+            return False        # Ignore others
+        if coord is not None:
+            pt = self.coords2pts([coord[0], coord[1]])[0]
+            return self.over_us(point=pt)
+        
+        if event is not None:
+            cnv = event.widget
+            x,y = float(cnv.canvasx(event.x)), float(cnv.canvasy(event.y))
+            pt = self.coords2pts([x,y])[0]
+            return self.over_us(point=pt)
+        
+        return False
+     

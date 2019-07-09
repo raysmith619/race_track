@@ -40,33 +40,47 @@ class BlockPolygon(BlockBlock):
         by composing the individual translation
         matrixes from the top container.
         """
-        if len(self.points) < 10 and SlTrace.trace("short_points"):
-            SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.tag, self.points))
-        elif SlTrace.trace("display_points"):            
-            SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.tag, self.points))
-        SlTrace.lg("tag_list: %s" % self.get_tag_list())    
-        
-        if self.width is not None:
-            SlTrace.lg("width=%.1g" % self.width)
-        if self.height is not None:
-            SlTrace.lg("height=%.1g" % self.height)
-        if self.position is not None:
-            SlTrace.lg("position=%s" % self.position)
-        if self.rotation is not None:
-            SlTrace.lg("rotation=%.1fdeg" % self.rotation)
+        canvas = self.get_canvas()
+        if canvas is None:
+            SlTrace("NO canvas")
+            
+        if SlTrace.trace("display_polygon"):
+            if len(self.points) < 10 and SlTrace.trace("short_points"):
+                SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.tag, self.points))
+            elif SlTrace.trace("display_points"):            
+                SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.tag, self.points))
+            SlTrace.lg("tag_list: %s" % self.get_tag_list())    
+        if SlTrace.trace("display_polygon"):
+            if self.width is not None:
+                SlTrace.lg("width=%.1g" % self.width)
+            if self.height is not None:
+                SlTrace.lg("height=%.1g" % self.height)
+            if self.position is not None:
+                SlTrace.lg("position=%s" % self.position)
+            if self.rotation is not None:
+                SlTrace.lg("rotation=%.1fdeg" % self.rotation)
         pts = self.get_absolute_points()
-        
-        if len(pts) < 10 and SlTrace.trace("short_points"):
-            SlTrace.lg("create_polygon(absolute points:%s" % (pts))
-        elif SlTrace.trace("display_points"):
-            SlTrace.lg("create_polygon(absolute points:%s" % (pts))
         coords = self.pts2coords(pts)
-        if len(pts) < 10 and SlTrace.trace("short_points"):
-            SlTrace.lg("create_polygon(coords:%s, kwargs=%s" % (coords, self.xkwargs))
-        elif  SlTrace.trace("display_points"):
-            SlTrace.lg("create_polygon(coords:%s, kwargs=%s" % (coords, self.xkwargs))
-        self.get_canvas().create_polygon(coords, **self.xkwargs)
 
+        if SlTrace.trace("display_polygon"):
+            if len(pts) < 10 and SlTrace.trace("short_points"):
+                SlTrace.lg("display_polygon(absolute points:%s" % (pts))
+            elif SlTrace.trace("display_points"):
+                SlTrace.lg("display_polygon(absolute points:%s" % (pts))
+            if len(pts) < 10 and SlTrace.trace("short_points"):
+                SlTrace.lg("display_polygon(coords:%s, kwargs=%s" % (coords, self.xkwargs))
+            elif  SlTrace.trace("display_points"):
+                SlTrace.lg("display_polygon(coords:%s, kwargs=%s" % (coords, self.xkwargs))
+        if self.is_selected():
+            self.xkwargs['outline'] = "red"
+            self.xkwargs['width'] = 3
+        else:
+            self.xkwargs['outline'] = None
+            self.xkwargs['width'] = None
+        
+        self.remove_display_objects()    
+        tag = canvas.create_polygon(coords, **self.xkwargs)
+        self.store_tag(tag)
         
 
 

@@ -12,7 +12,7 @@ from homcoord import *
 
 from select_trace import SlTrace
 from select_error import SelectError
-
+from block_window import BlockWindow
 from road_track import RoadTrack
 from block_panel import BlockPanel
 from block_block import BlockBlock,BlockType
@@ -25,8 +25,9 @@ from road_track_setup import RoadTrackSetup
 from road_block import RoadBlock
 from road_turn import RoadTurn
 from block_arc import BlockArc
+from position_window import PositionWindow
 
-SlTrace.setFlags("short_points,starter_track")
+SlTrace.setFlags("short_points,starter_track,motion_down,down,dragged,get_event_block")
 
 width = 600     # Window width
 height = width  # Window height
@@ -54,8 +55,32 @@ rotation = args.rotation
 SlTrace.lg("%s %s\n" % (os.path.basename(sys.argv[0]), " ".join(sys.argv[1:])))
 SlTrace.lg("args: %s\n" % args)
 
-        
-frame = Frame(width=width, height=height, bg="", colormap="new")
+# Program exit control
+def pgm_exit():
+    ###ActiveCheck.clear_active()  # Disable activities
+    quit()
+    SlTrace.lg("Properties File: %s"% SlTrace.getPropPath())
+    SlTrace.lg("Log File: %s"% SlTrace.getLogPath())
+    sys.exit(0)
+
+def play_exit():
+    """ End playing
+    Called from Window control
+    """
+    ###ActiveCheck.clear_active()  # Disable activities
+    pgm_exit()
+
+
+mw = Tk()        
+app = BlockWindow(mw,
+                title="crs_dots",
+                pgmExit=play_exit,
+                cmd_proc=True,
+                cmd_file=None,
+                arrange_selection=False,
+                game_control=None
+                )
+frame = Frame(app, width=width, height=height, bg="", colormap="new")
 frame.pack()
 canvas = Canvas(frame, width=width, height=height)
 canvas.pack()   
@@ -68,12 +93,14 @@ if pos_x is not None or pos_y is not None:
     if pos_y is None:
         pos_y = 0.
     position = Pt(pos_x, pos_y)
-    
+
 tR = RaceTrack(canvas=canvas, width=th_width, height=th_height,
                position=position,
                cv_width=width, cv_height=height,
                rotation=rotation)
 tR.display()
+pos_ctl = PositionWindow("Part Positioning",
+                         change_control_proc=tR.pos_change_control_proc)    
 
 if starter_track:
     road_track = tR.get_road_track()
@@ -81,6 +108,8 @@ if starter_track:
 
 road_bin = tR.get_road_bin()
 RoadBinSetup(road_bin)
+
+
 ###RoadBinSetup(road_track)
 tR.display()
 

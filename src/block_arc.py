@@ -23,6 +23,8 @@ class BlockArc(BlockBlock):
                  **kwargs):
         """ Setup object
         :radius: fraction of container default=.5
+        :center: position of center in block
+                default Pt(width/2, height/2)
         :start: angle starting default=0 deg (up)
         :arc: arc in degrees default=360 deg (counter clockwise)
 
@@ -34,7 +36,7 @@ class BlockArc(BlockBlock):
                                  :
                *                 :                 *
               *                  :                  *
-                                 :  position    
+                                 :     
              *                   :  center           *
              *                   : /                 *
              *-------------------+-------------------*
@@ -46,7 +48,7 @@ class BlockArc(BlockBlock):
                   *              :              *
                       *          :          *
                             *    *    *
-
+             *<--position
              | <--- radius ----> |
              
              center = Pt(position.x + radius, position.y + radius
@@ -56,28 +58,13 @@ class BlockArc(BlockBlock):
         super().__init__(ctype=BlockType.ARC, **kwargs)
         width = self.width
         height = self.height
-        if radius is not None:
-            height = width = 2 * radius
-        elif width is not None:
-            radius = width/2
-        else:
-            raise SelectError("One of radius or width must be specified")
-
+        if radius is None:
+            radius = width/2.
         self.radius = radius
-        self.height = height
-        self.width = width
-        
-        position = self.position
-        if center is not None:
-            position = center
-        elif position is not None:
-            center = position          # Place center up 1/2 to right 1/2
-        else:
-            raise SelectError("One of center or position must be specified")
-        
+
+        if center is None:
+            center = Pt(.5, .5)
         self.center = center
-        self.position = position
-        
         if start is None:
             start = 0.
         self.start = start
@@ -86,8 +73,8 @@ class BlockArc(BlockBlock):
         nstep = 360         # TBD - uniform separation
         end_angle = self.start + self.arc
         inc_angle = (end_angle-self.start)/nstep
-        rad = .5                # Circle centered in the middle
-        ct = Pt(0, 0)
+        rad = self.radius                # Circle centered in the middle
+        ct = self.center
         pts.append(ct)
         for i in range(nstep+1):
             angle = self.start + i * inc_angle
@@ -97,6 +84,19 @@ class BlockArc(BlockBlock):
             pt = Pt(ct.x+pt_x, ct.y+pt_y)
             pts.append(pt)
         self.points = pts
+
+
+    def __deepcopy__(self, memo):
+        """ Hook to avoid deep copy where not appropriate
+        """
+        new_inst = super().__deepcopy__(memo)
+        new_inst.center = self.center
+        new_inst.radius = self.radius
+        new_inst.start = self.start
+        new_inst.arc = self.arc
+                
+        return new_inst
+
  
     def display(self):
         """ Display polygon
@@ -111,8 +111,8 @@ class BlockArc(BlockBlock):
         by composing the individual translation
         matrixes from the top container.
         """
-        SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.tag, self.points), "display_points")
-        SlTrace.lg("tag_list: %s" % self.get_tag_list())    
+        ###SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.tag, self.points), "display_points")
+        SlTrace.lg("tag_list: %s" % self.get_tag_list(), "display_tags")    
         
         if self.position is not None:
             SlTrace.lg("center=%s" % self.center)
@@ -128,4 +128,13 @@ class BlockArc(BlockBlock):
         SlTrace.lg("create_polygon:%s, kwargs=%s" % (coords, self.xkwargs), "arc_coords")
         if self.xkwargs is None:
             self.xkwargs = {}
-        self.get_canvas().create_polygon(coords, **self.xkwargs)
+        if self.is_selected():
+            self.xkwargs['outline'] = "red"
+            self.xkwargs['width'] = 3
+        else:
+            self.xkwargs['outline'] = None
+            self.xkwargs['width'] = None
+            
+        self.remove_display_objects()           # Remove display objects
+        tag = self.get_canvas().create_polygon(coords, **self.xkwargs)
+        self.store_tag(tag)

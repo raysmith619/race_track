@@ -63,6 +63,15 @@ class RoadPanel(RoadBlock):
             p4 = Pt(1,0)
             points = [p1,p2,p3,p4]
         return super().get_absolute_points(points)
+
+
+    def add_entry(self, entry, origin="road_panel"):
+        """ Add next entry
+        :entry: completed entry
+        :origin: origin of block, used to id starting point
+        """
+        entry.origin = origin
+        self.comps.append(entry)
     
         
 if __name__ == "__main__":

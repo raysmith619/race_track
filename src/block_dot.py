@@ -38,7 +38,10 @@ class BlockDot(BlockBlock):
         canvas = self.get_canvas()
         dot_rad = 10
         dot_coord = [dot_x-dot_rad, dot_y-dot_rad, dot_x+dot_rad, dot_y+dot_rad]
-        self.canvas_tag = canvas.create_oval(dot_coord, fill=self.color, **self.xkwargs) 
+        
+        self.remove_display_objects()
+        tag = canvas.create_oval(dot_coord, fill=self.color, **self.xkwargs)
+        self.store_tag(tag) 
        
         
     
