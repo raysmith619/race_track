@@ -28,6 +28,37 @@ def tran2matrix(tran):
     return "%s" % tran._m
 
 
+class SelectInfo:
+    """ Selected block information
+    Used to provide operation on selected objects
+    """
+    
+    def __init__(self, block=None, x_coord=None, y_coord=None, x_coord_prev=None,  y_coord_prev=None):
+        if block is None:
+            raise SelectError("SelectInfo when block is None")
+        
+        if x_coord is None:
+            raise SelectError("SelectInfo when x_coord is None")
+        
+        self.x_coord = x_coord
+        self.y_coord = y_coord
+        if x_coord_prev is None:
+            x_coord_prev = x_coord
+        self.x_coord_prev = x_coord_prev
+        if y_coord_prev is None:
+            y_coord_prev = y_coord
+        self.y_coord_prev = y_coord_prev
+        self.block = block
+        
+    def __repr__(self):
+        str_str = "%s" % self.block
+        return str_str
+        
+    def __str__(self):
+        str_str = "%s" % self.block
+        return str_str
+
+
    
 class BlockBlock:
     """
@@ -54,6 +85,7 @@ class BlockBlock:
     id = 0
     tagged_blocks = {}      # Displayed blocks, by canvas tag
     id_blocks = {}          # Blocks by block id
+    selects = {}            # ids of selected blocks
 
     @classmethod
     def new_id(cls):
@@ -197,6 +229,118 @@ class BlockBlock:
             pt = xtran.apply(point)
             pts.append(pt)
         return pts
+
+
+        
+        
+    @classmethod
+    def set_selected(cls, block, x_coord=None, y_coord=None, x_coord_prev=None,
+                     y_coord_prev=None, keep_old=False):
+        """ Set/add block to selected blocks
+        :block: block to be added
+        :x_coord: x canvas coordinate
+        :y_coord: y canvas coordinate
+        :x_coord_prev: previous x coordinate default: x_coord
+        :y_coord_prev: previous y coordinate default: y_coord
+        :keep_old: keep old selected default: False (drop previously selected)
+        :returns: reference to new selection entry
+        """
+        if block is None:
+            raise SelectError("set_selected with block is None")
+        if not keep_old:
+            sids = list(cls.selects.keys())
+            for sid in sids:
+                SlTrace.lg("Clearing selected %s" % cls.selects[sid].block)
+                cls.clear_selected(sid)
+        selected = SelectInfo(block=block, x_coord=x_coord, y_coord=y_coord,
+                              x_coord_prev=x_coord_prev, y_coord_prev=y_coord_prev)
+        cls.selects[block.id] = selected
+        block.selected = True
+        SlTrace.lg("set_selected(%s)"  % block)
+        return selected
+    
+
+    @classmethod
+    def clear_selected(cls, bid=None):
+        """ Clear (unset) selected block
+            May do some visual stuff in the future
+        :bid:  block id, default: clear all selected blocks
+        """
+        if bid is None:
+            sids = list(cls.selects.keys())
+            for sid in sids:
+                cls.clear_selected_block(sid)
+        else:
+            cls.clear_selected_block(bid)        
+
+
+    @classmethod
+    def clear_selected_block(cls, bid):
+        """ clear specified block
+        :bid: block id to clear selected
+        """
+        if not bid in cls.id_blocks:
+            return
+                
+        block = cls.id_blocks[bid]
+        comp = block
+        while comp is not None:
+            blk_id = comp.id
+            if blk_id in cls.id_blocks and blk_id in cls.selects:
+                del cls.selects[blk_id]
+                comp.display()
+                
+            comp = comp.container
+
+
+    @classmethod
+    def get_selected_blocks(cls):
+        """ Return list of blocks currently selected
+        """
+        blocks = []
+        for select in cls.selects.values():
+            blocks.append(select.block)
+        return blocks
+        
+
+    @classmethod
+    def get_selected(cls, block=None):
+        """ Get selected info, block if selected, else None
+        :block:  block to check.
+        """
+        if block is None:
+            raise SelectError("get_selected: with block is None")
+
+        selected = None
+        for sid in cls.selects:
+            selected = cls.selects[sid]
+            if selected.block.id == sid:
+                break
+            
+        
+        if selected.block is None:
+            raise SelectError("selected with None for block")
+       
+        if selected.x_coord is None:
+            SlTrace.lg("selected with None for x_coord")
+            cv_width = cls.get_cv_width()
+            cv_height = cls.get_cv_height()
+            selected = SelectInfo(block=None, x_coord=cv_width/2, y_coord=cv_height/2)  # HACK
+        return selected
+
+           
+           
+    @classmethod
+    def is_selected_block(cls, block):
+        """ Determine if block is selected
+        Is selected if it or any in container tree is in cls.selects
+        """
+        comp = block
+        while comp is not None:
+            if comp.id in cls.selects:
+                return True
+            comp = comp.container
+        return False
                 
         
             
@@ -515,7 +659,7 @@ class BlockBlock:
         :returns: canvas, None if no canvas or top
         """
         top = self.get_top_container()
-        SlTrace.lg("get_canvas: top:%s selects:%s" % (top, top.selects))
+        SlTrace.lg("get_canvas: top:%s selects:%s" % (top, self.selects))
         return top.canvas
     
     
@@ -546,6 +690,13 @@ class BlockBlock:
             return True
         
         return False
+
+    
+    def is_selected(self):
+        """ Check if selected or any in the container chain is
+        selected
+        """
+        return self.is_selected_block(self)
 
                
     def base_xtran(self):
@@ -817,14 +968,6 @@ class BlockBlock:
         scale = self.scale()
         rel_new_pos = Pt(position.x+delta_x/scale.x, position.y-delta_y/scale.y)
         self.position = rel_new_pos
-
-    
-    def is_selected(self):
-        """ Check if selected or any in the container chain is
-        selected
-        """
-        top = self.get_top_container()
-        return top.is_selected(self)
 
     
 

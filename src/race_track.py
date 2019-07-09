@@ -22,36 +22,6 @@ from block_mouse import BlockMouse
 from docutils.nodes import sidebar
 from dist.hello.unicodedata import bidirectional
 from numpy import block
-
-class SelectInfo:
-    """ Selected block information
-    Used to provide operation on selected objects
-    """
-    
-    def __init__(self, block=None, x_coord=None, y_coord=None, x_coord_prev=None,  y_coord_prev=None):
-        if block is None:
-            raise SelectError("SelectInfo when block is None")
-        
-        if x_coord is None:
-            raise SelectError("SelectInfo when x_coord is None")
-        
-        self.x_coord = x_coord
-        self.y_coord = y_coord
-        if x_coord_prev is None:
-            x_coord_prev = x_coord
-        self.x_coord_prev = x_coord_prev
-        if y_coord_prev is None:
-            y_coord_prev = y_coord
-        self.y_coord_prev = y_coord_prev
-        self.block = block
-        
-    def __repr__(self):
-        str_str = "%s" % self.block
-        return str_str
-        
-    def __str__(self):
-        str_str = "%s" % block
-        return str_str
     
         
 class RaceTrack(RoadTrack, BlockMouse):
@@ -68,7 +38,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         if container is None:
             set width, height to pixel(absolute)
         """
-        self.selects = {}               # ids of selected
         self.motion_bind_id = None
         self.car_bin = None             # Set if present
         self.road_bin = None
@@ -411,110 +380,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         """
         SlTrace.lg("Setting event block: %s" % block)
         self.event_block = block 
-        
-        
-    def set_selected(self, block, x_coord=None, y_coord=None, x_coord_prev=None,
-                     y_coord_prev=None, keep_old=False):
-        """ Set/add block to selected blocks
-        :block: block to be added
-        :x_coord: x canvas coordinate
-        :y_coord: y canvas coordinate
-        :x_coord_prev: previous x coordinate default: x_coord
-        :y_coord_prev: previous y coordinate default: y_coord
-        :keep_old: keep old selected default: False (drop previously selected)
-        :returns: reference to new selection entry
-        """
-        if block is None:
-            raise SelectError("set_selected with block is None")
-        if not keep_old:
-            sids = list(self.selects.keys())
-            for sid in sids:
-                SlTrace.lg("Clearing selected %s" % self.selects[sid].block)
-                self.clear_selected(sid)
-        selected = SelectInfo(block=block, x_coord=x_coord, y_coord=y_coord,
-                              x_coord_prev=x_coord_prev, y_coord_prev=y_coord_prev)
-        self.selects[block.id] = selected
-        block.selected = True
-        SlTrace.lg("set_selected(%s)"  % block)
-        return selected
-    
-
-    def clear_selected(self, bid=None):
-        """ Clear (unset) selected block
-            May do some visual stuff in the future
-        :bid:  block id, default: clear all selected blocks
-        """
-        if bid is None:
-            sids = list(self.selects.keys())
-            for sid in sids:
-                self.clear_selected_block(sid)
-        else:
-            self.clear_selected_block(bid)        
-
-
-    def clear_selected_block(self, bid):
-        """ clear specified block
-        :bid: block id to clear selected
-        """
-        if not bid in self.id_blocks:
-            return
-                
-        block = self.id_blocks[bid]
-        comp = block
-        while comp is not None:
-            blk_id = comp.id
-            if blk_id in self.id_blocks and blk_id in self.selects:
-                del self.selects[blk_id]
-                comp.display()
-                
-            comp = comp.container
-
-
-    def get_selected_blocks(self):
-        """ Return list of blocks currently selected
-        """
-        blocks = []
-        for select in self.selects.values():
-            blocks.append(select.block)
-        return blocks
-        
-
-    def get_selected(self, block=None):
-        """ Get selected info, block if selected, else None
-        :block:  block to check.
-        """
-        if block is None:
-            raise SelectError("get_selected: with block is None")
-
-        selected = None
-        for sid in self.selects:
-            selected = self.selects[sid]
-            if selected.block.id == sid:
-                break
-            
-        
-        if selected.block is None:
-            raise SelectError("selected with None for block")
-       
-        if selected.x_coord is None:
-            SlTrace.lg("selected with None for x_coord")
-            cv_width = self.get_cv_width()
-            cv_height = self.get_cv_height()
-            selected = SelectInfo(block=None, x_coord=cv_width/2, y_coord=cv_height/2)  # HACK
-        return selected
-
-           
-           
-    def is_selected(self, block):
-        """ Determine if block is selected
-        Is selected if it or any in container tree is in self.selects
-        """
-        comp = block
-        while comp is not None:
-            if comp.id in self.selects:
-                return True
-            comp = comp.container
-        return False
 
 
     def pos_change_control_proc(self, change):

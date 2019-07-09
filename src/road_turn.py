@@ -104,3 +104,4 @@ class RoadTurn(RoadBlock):
                             arc=arc,
                             xkwargs=old_arc.xkwargs)
         self.comps[0] = new_arc
+        
