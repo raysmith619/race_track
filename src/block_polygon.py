@@ -26,6 +26,18 @@ class BlockPolygon(BlockBlock):
         self.points = points
 
 
+
+    def __deepcopy__(self, memo):
+        """ Hook to avoid deep copy where not appropriate
+        """
+        new_inst = super().__deepcopy__(memo)
+        new_inst.points = []
+        for point in self.points:
+            new_inst.points.append(point)
+                
+        return new_inst
+
+
  
     def display(self):
         """ Display polygon

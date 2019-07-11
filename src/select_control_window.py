@@ -172,7 +172,7 @@ class SelectControlWindow(Toplevel):
         :frame: current frame into which controls go
         :base_field: base for variables/widgets are stored
         """
-        base_frame.pack()
+        ###base_frame.pack()
         self.base_frame = base_frame
         self.base_field = base_field
         if title is None:

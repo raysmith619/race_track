@@ -22,6 +22,7 @@ from block_mouse import BlockMouse
 from docutils.nodes import sidebar
 from dist.hello.unicodedata import bidirectional
 from numpy import block
+from _operator import pos
     
         
 class RaceTrack(RoadTrack, BlockMouse):
@@ -132,6 +133,9 @@ class RaceTrack(RoadTrack, BlockMouse):
         if len(item_tags) == 0:
             SlTrace.lg("get_event_block - no CURRENT", "get_event_block")
             if event is not None:
+                SlTrace.lg("event - none - ignored")
+                ###return None
+           
                 SlTrace.lg("Check for item close", "get_event_block")
                 item_tag = None
                 item = canvas.find_closest(event.x, event.y)
@@ -203,7 +207,7 @@ class RaceTrack(RoadTrack, BlockMouse):
             else:
                 SlTrace.lg("Unrecognized origin: %s" % mouse_block.origin)
             mouse_block.state = "selected"
-            self.set_selected(mouse_block, x_coord=x, y_coord=y)
+            self.set_selected(mouse_block.id, x_coord=x, y_coord=y)
             mouse_block.display()
         else:
             self.clear_selected()
@@ -211,7 +215,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         
     def mouse_down_motion (self, event):
         ###cnv.itemconfigure (tk.CURRENT, fill ="blue")
-        cnv = event.widget
         x,y = event.x, event.y
         ###got = event.widget.coords (tk.CURRENT, x, y)
         SlTrace.lg("move to x=%d y=%d" % (x,y), "motion_down")
@@ -266,7 +269,7 @@ class RaceTrack(RoadTrack, BlockMouse):
             new_block.state = "new"
             delta_x = x - selected.x_coord_prev 
             delta_y = y - selected.y_coord_prev
-            new_selected = self.set_selected(new_block, x_coord=x, y_coord=y)
+            new_selected = self.set_selected(new_block.id, x_coord=x, y_coord=y)
             new_block.drag_block(delta_x=delta_x, delta_y=delta_y, canvas_coord=True)
             ###new_block.display()
             SlTrace.lg("new_block(%s)[%s] dragged to x,y=%d,%d" %
@@ -303,7 +306,7 @@ class RaceTrack(RoadTrack, BlockMouse):
             ###SlTrace.lg("Dragged %s[%s] delta_xy=(%d,%d) new_xy=(%d,%d)" %
             ###            (block, block.get_tag_list(), delta_x,delta_y, x,y), "dragged")
             ###block.state = "moved"
-            ###self.set_selected(block, x_coord=x, y_coord=y)
+            ###self.set_selected(block.id, x_coord=x, y_coord=y)
             ###block.display()
             ###SlTrace.lg("selected new in road_bin")
             ###selected.x_coord_prev = x 
@@ -355,7 +358,7 @@ class RaceTrack(RoadTrack, BlockMouse):
                                      rotation=road_rot,
                                      position=track_pos, origin="road_track")
 
-        self.add_entry(track_block)
+        self.add_road(track_block)
         track_abs_pos = track_block.get_absolute_point(track_pos)
         track_block_coord = track.pts2coords(track_abs_pos)
         track_x,track_y = track_block_coord
@@ -363,7 +366,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         mw = canvas._root()
         mw.event_generate('<Motion>', warp=True, x=track_x, y=track_y)
         self.clear_selected(block.id)
-        self.set_selected(track_block, x_coord=track_x, y_coord=track_y)
+        self.set_selected(track_block.id, x_coord=track_x, y_coord=track_y)
         track_block.display()
         SlTrace.lg("move_to_track: %s[%s] xy=(%d,%d)" %
          (track_block, track_block.get_tag_list(), track_x,track_y))
@@ -390,8 +393,10 @@ class RaceTrack(RoadTrack, BlockMouse):
         len_sels = len(selected_blocks)
         sel_block = None        # Set to block iff only selected
         ltdeg = 90.
-        if len_sels == 1:
-            sel_block = selected_blocks[0]
+        if len_sels > 0:
+            sel_block = selected_blocks[-1]
+        if sel_block is None:
+            return                      # Ignore if no blocks selected
         
         if change == "spin_left":
             sel_block.rotate(ltdeg)
@@ -402,14 +407,81 @@ class RaceTrack(RoadTrack, BlockMouse):
                 ###sel_block.rotate(180)
                 ###sel_block.display()
                 sel_block.new_arc(-sel_block.get_arc())
-
+        elif change == "front_add_strait":
+            self.front_add_type(RoadStrait)
+            return
+        
+        elif change == "front_add_left_turn":
+            self.front_add_type(RoadTurn, "left")
+            return
+        
+        elif change == "front_add_right_turn":
+            self.front_add_type(RoadTurn, "right")
+            return
+        
+        elif change == "select_none":
+            for block in selected_blocks:
+                self.clear_selected(block.id)
+                block.display()
+            return
+        
+        elif change == "select_all":
+            for road in self.road_track.roads:
+                road_id = road.id
+                self.set_selected(road_id, keep_old=True)
+                road.display()
+            return
+        
+        elif change == "select_others":
+            for road in self.road_track.roads:
+                road_id = road.id
+                if road.is_selected():
+                    self.clear_selected_block(road_id)
+                else:
+                    self.set_selected(road_id, keep_old=True)
+                road.display()
+            
         else:
             SlTrace.lg("position_change_control_proc: change(%s) not yet implemented" % change)
             return
         
         sel_block.display()         # Display after change
 
+    
+    def front_add_type(self, new_type=None, modifier=None):
+        """ Add RoadStrait to front end(top end of most recently selected)
+            TBD: Possibly changed to determine end of physically connected string
+        """
+        sel_list = self.get_selected_blocks()
+        if not sel_list:
+            return      # None selected
+        
+        SlTrace.lg("\nfront_add_type:", "add_block")
+        front_block = sel_list[-1]
+        SlTrace.lg("front_add_type: front_block:%s" % front_block, "add_block")
+        SlTrace.lg("front_add_type: points:%s" % front_block.get_absolute_points(), "add_block")
+        pos = front_block.get_top_left()
+        abs_pos = self.get_absolute_point(pos)
+        SlTrace.lg("front_add_type: pos:%s" % pos, "add_block")
+        new_block = front_block.new_type(new_type, modifier)
+        self.add_road(new_block)
+        SlTrace.lg("front_add_type: new_block:%s" % new_block, "add_block")
+        SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
+        new_block.move_to(position=pos)
+        SlTrace.lg("front_add_type: moved new_block:%s" % new_block, "add_block")
+        SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
+        ###self.set_selected(new_block, keep_old=True)
+        self.set_selected(new_block.id, keep_old=True)
+        canvas = self.get_canvas()
+        new_block.display()
 
+    def add_road(self, road):
+        """ Add road segment to track
+        :road: road to add
+        """
+        self.road_track.add_road(road)
+        
+        
 if __name__ == "__main__":
     import os
     import sys

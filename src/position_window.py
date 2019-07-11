@@ -41,7 +41,6 @@ class PositionWindow(SelectControlWindow):
         super().control_display()       # Do base work        
         
         controls_frame = self.top_frame
-        controls_frame.pack(side="top", fill="x", expand=True)
         
         spin_flip_frame = Frame(controls_frame)
         spin_flip_frame.pack(side="top", fill="x", expand=True)
@@ -79,6 +78,15 @@ class PositionWindow(SelectControlWindow):
         self.set_button(field="delete", label="Front", command=self.delete_front)
         self.set_button(field="delete", label="Back", command=self.delete_back)
         
+        select_unselect_frame = Frame(controls_frame)
+        select_unselect_frame.pack(anchor="w", side="left", fill="x", expand=True)
+        select_frame = Frame(select_unselect_frame)
+        select_frame.pack(anchor="w", side="left", fill="x", expand=True)
+        self.set_fields(select_frame, "select", title="Select/Unselect:")
+        self.set_button(field="select", label="None", command=self.select_none)
+        self.set_button(field="select", label="All", command=self.select_all)
+        self.set_button(field="select", label="Others", command=self.select_others)
+        
         
         self.arrange_windows()
 
@@ -92,7 +100,15 @@ class PositionWindow(SelectControlWindow):
         SlTrace.lg("change_control:%s" % change)
         if self.change_control_proc is not None:
             self.change_control_proc(change)
-            
+
+    def select_none(self):
+        self.change_control("select_none")       
+
+    def select_all(self):
+        self.change_control("select_all")       
+
+    def select_others(self):
+        self.change_control("select_others")       
             
     def spin_left(self):
         self.change_control("spin_left")

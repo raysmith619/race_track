@@ -27,7 +27,7 @@ from road_turn import RoadTurn
 from block_arc import BlockArc
 from position_window import PositionWindow
 
-SlTrace.setFlags("short_points,starter_track,motion_down,down,dragged,get_event_block")
+SlTrace.setFlags("short_points,starter_track,motion_down,down,dragged,get_event_block,add_block")
 
 width = 600     # Window width
 height = width  # Window height
