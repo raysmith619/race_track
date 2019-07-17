@@ -16,13 +16,14 @@ class BlockPolygon(BlockBlock):
     """
             
     def __init__(self,
+                 ctype=BlockType.POLYGON,
                  points=None,
                  **kwargs):
         """ Setup object
         :points:    points, used for this component
         :All other BlockBlock parameters:
         """
-        super().__init__(**kwargs)
+        super().__init__(ctype=ctype, **kwargs)
         self.points = points
 
 

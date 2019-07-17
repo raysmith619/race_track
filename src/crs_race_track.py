@@ -27,7 +27,8 @@ from road_turn import RoadTurn
 from block_arc import BlockArc
 from position_window import PositionWindow
 
-SlTrace.setFlags("short_points,starter_track,motion_down,down,dragged,get_event_block,add_block")
+SlTrace.setFlags("short_points,starter_track,down"
+                 + ",add_block,mouse_right_info")
 
 width = 600     # Window width
 height = width  # Window height
@@ -72,8 +73,8 @@ def play_exit():
 
 
 mw = Tk()        
-app = BlockWindow(mw,
-                title="crs_dots",
+app = BlockWindow(master=mw,
+                title="My Race Track",
                 pgmExit=play_exit,
                 cmd_proc=True,
                 cmd_file=None,
@@ -94,7 +95,7 @@ if pos_x is not None or pos_y is not None:
         pos_y = 0.
     position = Pt(pos_x, pos_y)
 
-tR = RaceTrack(canvas=canvas, width=th_width, height=th_height,
+tR = RaceTrack(mw=mw, canvas=canvas, width=th_width, height=th_height,
                position=position,
                cv_width=width, cv_height=height,
                rotation=rotation)
@@ -108,6 +109,7 @@ if starter_track:
 
 road_bin = tR.get_road_bin()
 RoadBinSetup(road_bin)
+tR.set_reset()
 
 
 ###RoadBinSetup(road_track)

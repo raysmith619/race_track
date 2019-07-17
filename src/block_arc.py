@@ -55,6 +55,8 @@ class BlockArc(BlockBlock):
              position = Pt(center.x - radius, center.y - radius
              
     """
+        if SlTrace.trace("test"):
+            print()
         super().__init__(ctype=BlockType.ARC, **kwargs)
         width = self.width
         height = self.height
@@ -78,7 +80,7 @@ class BlockArc(BlockBlock):
         pts.append(ct)
         for i in range(nstep+1):
             angle = self.start + i * inc_angle
-            theta = radians(-angle)          # In radians
+            theta = radians(angle)          # In radians
             pt_x = rad * sin(theta)
             pt_y = rad * cos(theta)
             pt = Pt(ct.x+pt_x, ct.y+pt_y)
@@ -91,6 +93,8 @@ class BlockArc(BlockBlock):
         """
         new_inst = super().__deepcopy__(memo)
         new_inst.center = self.center
+        new_inst.points = []
+        new_inst.points.extend(self.points)
         new_inst.radius = self.radius
         new_inst.start = self.start
         new_inst.arc = self.arc
@@ -112,20 +116,20 @@ class BlockArc(BlockBlock):
         matrixes from the top container.
         """
         ###SlTrace.lg("\ndisplay polygon points[%s]=%s" % (self.tag, self.points), "display_points")
-        SlTrace.lg("tag_list: %s" % self.get_tag_list(), "display_tags")    
-        
-        if self.position is not None:
-            SlTrace.lg("center=%s" % self.center)
-        if self.radius is not None:
-            SlTrace.lg("radius=%.1g" % self.radius)
-        if self.start is not None:
-            SlTrace.lg("start=%.1f" % self.start)
-        if self.arc is not None:
-            SlTrace.lg("arc=%.1f" % self.arc)
         pts = self.get_absolute_points()
-        SlTrace.lg("arc: create_polygon(points:%s" % (pts), "arc_points")
         coords = self.pts2coords(pts)
-        SlTrace.lg("create_polygon:%s, kwargs=%s" % (coords, self.xkwargs), "arc_coords")
+        if SlTrace.trace("display"):
+            SlTrace.lg("tag_list: %s" % self.get_tag_list())
+            if self.position is not None:
+                SlTrace.lg("center=%s" % self.center)
+            if self.radius is not None:
+                SlTrace.lg("radius=%.1g" % self.radius)
+            if self.start is not None:
+                SlTrace.lg("start=%.1f" % self.start)
+            if self.arc is not None:
+                SlTrace.lg("arc=%.1f" % self.arc)
+            SlTrace.lg("arc: create_polygon(points:%s" % (pts), "arc_points")
+            SlTrace.lg("create_polygon:%s, kwargs=%s" % (coords, self.xkwargs), "arc_coords")
         if self.xkwargs is None:
             self.xkwargs = {}
         if self.is_selected():

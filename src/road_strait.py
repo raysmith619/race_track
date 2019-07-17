@@ -37,7 +37,7 @@ class RoadStrait(RoadBlock):
                             ###height=self.height,
                             ###rotation=self.rotation,
                             ctype=BlockType.POLYGON,
-                            points=[Pt(0,0), Pt(1,0), Pt(1,1), Pt(0,1)],
+                            points=[Pt(0,0), Pt(0,1), Pt(1,1), Pt(1,0)],
                             xkwargs={'fill' : 'black'})
         self.comps.append(strait)
 

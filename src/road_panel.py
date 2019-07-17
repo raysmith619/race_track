@@ -72,6 +72,7 @@ class RoadPanel(RoadBlock):
         """
         entry.origin = origin
         self.comps.append(entry)
+        self.id_blocks[entry.id] = entry
     
         
 if __name__ == "__main__":

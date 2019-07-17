@@ -47,7 +47,7 @@ class RoadTrack(BlockPanel):
             canvas = self.get_canvas()
             if canvas is None:
                 self.canvas = Canvas(width=self.cv_width, height=self.cv_height)
-        self.roads = []     # List of components    # Parts of track
+        self.roads = {}     # road sections of the track by block id
         self.road_width = road_width
         self.road_length = road_length
         self.surface = surface
@@ -60,7 +60,7 @@ class RoadTrack(BlockPanel):
         :origin: origin of block, used to id starting point
         """
         entry.origin = origin
-        self.roads.append(entry)
+        self.roads[entry.id] = entry
         self.id_blocks[entry.id] = entry
         
     def add_road(self, roads):
@@ -72,6 +72,14 @@ class RoadTrack(BlockPanel):
         for road in roads:
             BlockBlock.id_blocks[road.id] = road
             self.add_entry(road)
+
+    def remove_road(self, road_id):
+        """ Remove road from track
+        :road_id: road's block id
+        """
+        if road_id in self.roads:
+            del self.roads[road_id]
+
             
             
     def display(self):
@@ -81,8 +89,18 @@ class RoadTrack(BlockPanel):
         """ Do panel
         """
         super().display()
-        for road in self.roads:
+        for road in self.roads.values():
             road.display()
+
+
+
+    def get_road(self, road_id):
+        """ Get road on track
+        """
+        if road_id in self.roads:
+            return self.roads[road_id]
+        
+        return None
             
 
     def get_road_surface(self):

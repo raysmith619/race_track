@@ -72,11 +72,17 @@ class PositionWindow(SelectControlWindow):
         self.set_button(field="add", label="Left Turn", command=self.back_add_left_turn)
         self.set_button(field="add", label="Right Turn", command=self.back_add_right_turn)
 
+        above_delete_frame = Frame(add_delete_frame)
+        above_delete_frame.pack(anchor="w", side="top", fill="both", expand=True)
+        self.set_vert_sep(frame=above_delete_frame)
         delete_frame = Frame(add_delete_frame)
-        delete_frame.pack(anchor="w", side="top", fill="x", expand=True)
+        delete_frame.pack(anchor="s", side="top", fill="x", expand=True)
+
         self.set_fields(delete_frame, "delete", title="Delete")
         self.set_button(field="delete", label="Front", command=self.delete_front)
         self.set_button(field="delete", label="Back", command=self.delete_back)
+        self.set_button(field="delete", label="Selected", command=self.delete_selected)
+        self.set_button(field="delete", label="All", command=self.delete_all)
         
         select_unselect_frame = Frame(controls_frame)
         select_unselect_frame.pack(anchor="w", side="left", fill="x", expand=True)
@@ -149,21 +155,37 @@ class PositionWindow(SelectControlWindow):
     def delete_back(self):
         self.change_control("delete_back")
     
+    def delete_selected(self):
+        self.change_control("delete_selected")
+    
+    def delete_all(self):
+        self.change_control("delete_all")
+    
     def update_window(self):
         if self.mw is None:
             return
 
-        
-        
-    def undo_button(self):
-        self.change_control("undoButton")
-        res = self.play_control.undo()
+    def set(self):
+        self.set_vals()
+        res = self.change_control("set_track")
         return res
-                
-        
-    def redo_button(self):
-        self.change_control("redoButton")
-        res = self.play_control.redo()
+
+    
+    def reset(self):
+        self.set_vals()
+        res = self.change_control("reset_track")
+        return res
+
+    
+    def undo(self):
+        self.set_vals()
+        res = self.change_control("undo_cmd")
+        return res
+
+    
+    def redo(self):
+        self.set_vals()
+        res = self.change_control("redo_cmd")
         return res
 
 

@@ -3,12 +3,14 @@
 from enum import Enum
 import copy
 from homcoord import *
+import sys, traceback
 
 
 from select_trace import SlTrace
 from select_error import SelectError
 from wx.lib.sized_controls import border
 from _hashlib import new
+from wx import CONTROL_SELECTED
 
 
 class BlockType(Enum):
@@ -86,7 +88,7 @@ class BlockBlock:
       width       0.to 1 of container width
       height      0. to 1 of container height
       rotation    rotation (degrees counter clockwise) relative to container
-                  0 = strait up
+                  0 = pointing to right (positive x)
       velocity    velocity: x,y / second
     internal:
       base_xtran - homogenous transform when needed
@@ -246,28 +248,38 @@ class BlockBlock:
         
         
     @classmethod
-    def set_selected(cls, block_id, x_coord=None, y_coord=None, x_coord_prev=None,
-                     y_coord_prev=None, keep_old=False):
+    def set_selected(cls, block_block_id, x_coord=None, y_coord=None, x_coord_prev=None,
+                     y_coord_prev=None, keep_old=False, display=True):
         """ Set/add block to selected blocks
-        :block_id: block to be added
+        :block_block_id: block/block_id to be added
         :x_coord: x canvas coordinate
         :y_coord: y canvas coordinate
         :x_coord_prev: previous x coordinate default: x_coord
         :y_coord_prev: previous y coordinate default: y_coord
         :keep_old: keep old selected default: False (drop previously selected)
+                    In any event, only drop selections from same origin
+        :display: display object afer change, default: True
         :returns: reference to new selection entry
         """
-        if block_id is None:
+        if block_block_id is None:
             raise SelectError("set_selected with block_id is None")
+        if isinstance(block_block_id, int):
+            block_id = block_block_id
+            block = cls.id_blocks[block_id]
+        else:
+            block = block_block_id
+            block_id = block.id
         if not block_id in cls.id_blocks:
             raise SelectError("get_selected id(%d) has no block" % block_id)
         
-        block = cls.id_blocks[block_id]
         if not keep_old:
+            select_origin = block.origin
             sids = list(cls.selects.keys())
             for sid in sids:
-                SlTrace.lg("Clearing selected %s" % cls.selects[sid].block)
-                cls.clear_selected(sid)
+                sid_block = cls.selects[sid].block
+                if sid_block.origin == select_origin:
+                    SlTrace.lg("Clearing selected %s" % sid_block)
+                    cls.clear_selected(sid)
         if x_coord is None:
             if block is not None:
                 x_coord, y_coord = block.position.xy    # Use block position               
@@ -276,26 +288,34 @@ class BlockBlock:
         cls.selects[block.id] = selected
         cls.selects_list.append(selected)
         ### Redundant ??? block.selected = True
-        SlTrace.lg("set_selected(%s)"  % block)
+        if SlTrace.trace("selected"):
+            SlTrace.lg("set_selected(%s)"  % block)
+        if SlTrace.trace("set_selected_stack"):
+            stack_str = ''.join(traceback.format_stack())
+            SlTrace.lg("\nset_selected_stack: %s" % stack_str)                    
+        if display:
+            block.display()
         return selected
     
 
     @classmethod
-    def clear_selected(cls, bid=None):
+    def clear_selected(cls, bid=None, origin=None, display=True):
         """ Clear (unset) selected block
             May do some visual stuff in the future
         :bid:  block id, default: clear all selected blocks
+        :origin: clear only if origin match default: all
         """
         if bid is None:
             sids = list(cls.selects.keys())
             for sid in sids:
-                cls.clear_selected_block(sid)
+                if origin is None or origin == cls.id_blocks[sid].origin:
+                    cls.clear_selected_block(sid, display=display)
         else:
-            cls.clear_selected_block(bid)        
+            cls.clear_selected_block(bid, display=display)        
 
 
     @classmethod
-    def clear_selected_block(cls, bid):
+    def clear_selected_block(cls, bid, display=True):
         """ clear specified block
         :bid: block id to clear selected
         """
@@ -312,30 +332,40 @@ class BlockBlock:
                 for i, selent in enumerate(cls.selects_list):
                     if blk_id == selent.block.id:
                         del cls.selects_list[i]
-                        comp.display()
+                        if display:
+                            comp.display()
                         return
                 
             comp = comp.container
 
 
     @classmethod
-    def get_selected_blocks(cls):
+    def get_selected_blocks(cls, origin=None):
         """ Return list of blocks currently selected
         """
         blocks = []
         for select in cls.selects_list:
-            blocks.append(select.block)
+            if origin is None or select.block.origin == origin:
+                blocks.append(select.block)
         return blocks
         
 
     @classmethod
-    def get_selected(cls, block=None):
+    def get_selected(cls, block=None, origin=None):
         """ Get selected info, block if selected, else None
         :block:  block to check.
+        :origin: limit selection to blocks with matching origin default: any origin
         """
         if block is None:
-            raise SelectError("get_selected: with block is None")
-
+            if origin is None:
+                return list(cls.selects.values())
+            
+            selecteds = []
+            for selected in cls.selects.values():
+                if selected.block.origin == origin:
+                    selecteds.append(selected)
+            return selecteds
+    
         selected = None
         for sid in cls.selects:
             selected = cls.selects[sid]
@@ -484,6 +514,24 @@ class BlockBlock:
             top = comp = comp.container
         return top
 
+
+    def get_position_coords(self):
+        """ Get canvas coordinate list for position
+        """
+        abs_pos = self.get_absolute_position()
+        coords = self.pts2coords([abs_pos])
+        return coords
+
+
+    def abs_pos(self):
+        """ Provide absolute canvas coordinates of block's position
+        :returns: return coordinate list(x,y) of coordinates
+        """
+        abs_pos = self.get_absolute_position()
+        abs_pos_coords = self.pts2coords(abs_pos)
+        return abs_pos_coords
+        
+    
     
     def get_absolute_position(self):
         """ Get block position in absolute form
@@ -661,15 +709,89 @@ class BlockBlock:
         pts = self.get_relative_points(pt)
         return pts[0]
 
+    def get_rotation(self):
+        """ Get rotation, relative to its container, of this block
+        :returns: relative rotation in degrees
+        """
+        rotation = 0. if self.rotation is None else self.rotation
+        rotation %= 360.
+        return rotation
 
+    def set_rotation(self, rotation=None):
+        """ Get rotation, relative to its container, of this block
+        :rotation: rotation, in degrees, to set
+        :returns: rotation
+        """
+        self.rotation = rotation
+        return rotation
+        
+        
+    def get_front_addon_rotation(self):
+        """ Get rotation for a forward "addon" block
+        :returns: rotation of addon block in containers reference
+                    None if no rotation, treated as 0. deg
+        """
+        return self.rotation
+
+
+    def get_back_addon_position(self, new_type=None):
+        """ Get point on which to place a new back "addon" block
+        so as to have the back block be a "front_addon_to the new block"
+        :returns: point (Pt) in containers reference 
+        """
+        raise SelectError("get_back_addon_position Not yet implemented")
+    
+        internal_pt = Pt(0,1)
+        rot = self.get_rotation()   # TFD to see what happens
+        if rot != 0 and rot != 180:
+            internal_pt = Pt(0,1*2)  
+        add_pt = self.get_relative_point(internal_pt)
+        if SlTrace.trace("get_front_addon"):
+            ###container = self.container if self.container is not None else self
+            SlTrace.lg("get_front_addon_position %s = %s(%s)" %
+                        (self, add_pt, self.get_absolute_point(internal_pt)))
+        return add_pt
+
+
+    def get_front_addon_position(self):
+        """ Get point on which to place a forward "addon" block
+        :returns: point (Pt) in containers reference 
+        """
+        internal_pt = Pt(0,1)
+        rot = self.get_rotation()   # TFD to see what happens
+        if rot != 0 and rot != 180:
+            internal_pt = Pt(0,1*2)  
+        add_pt = self.get_relative_point(internal_pt)
+        if SlTrace.trace("get_front_addon"):
+            ###container = self.container if self.container is not None else self
+            SlTrace.lg("get_front_addon_position %s = %s(%s)" %
+                        (self, add_pt, self.get_absolute_point(internal_pt)))
+        return add_pt
+    
+      
+    def abs_front_pos(self):
+        """ Get absolute xy canvas coordinates of front addon position
+        These are canvas coordinates of relative position
+        returned by get_front_addon_position()
+        :returns: list of coordinates x,y
+        """
+        add_pos = self.get_front_addon_position()
+        container = self.container if self.container is not None else self
+        abs_add_pos = container.get_absolute_point(add_pos)
+        pos_coords = self.pts2coords(abs_add_pos)
+        return pos_coords
+    
+    
     def get_top_left(self):
         """ Get top left corner in container's  terms
         so container can use next_entry(position=previous_entry.get_top_left()...) to place next_entry on
         the top left of previous entry.
         """
         tlc = self.get_relative_point(Pt(0,1))
-        container = self.container if self.container is not None else self
-        SlTrace.lg("get_top_left %s = %s(%s)" % (self.get_tag_list(), tlc, self.container.get_absolute_point(tlc)))
+        if SlTrace.trace("add_block"):
+            container = self.container if self.container is not None else self
+            SlTrace.lg("get_top_left %s = %s(%s)" %
+                        (self.get_tag_list(), tlc, container.get_absolute_point(tlc)))
         return tlc
 
 
@@ -717,6 +839,61 @@ class BlockBlock:
         
         return False
 
+
+    def is_at(self, x=None, y=None, level=0, max_level=10):
+        """ Check if point(x,y) is within the block or
+            its components
+        :x: canvas x coordinate
+        :y: canvas y coordinate
+        :level: recursion depth
+        :max_level: maximum depth, in case we have recursive construction
+        """
+        level += 1
+        if level > max_level:
+            return False
+        
+        if x is None:
+            raise SelectError("is_at is missing a required parameter x")
+        
+        if y is None:
+            raise SelectError("is_at is missing a required parameter y")
+        
+        if self.ctype == BlockType.COMPOSITE:
+            for comp in self.comps:
+                if comp.is_at(x=x, y=y, level=level+1):
+                    return True         # component is at x,y
+            
+            return False                # No component is at x,y
+        
+        # Treat as base component 
+        # rough guess treet as square
+        # For now assume alligned with x and y axes
+        min_x, min_y, max_x, max_y = self.min_max_xy()
+        if (x >= min_x and x <= max_x
+                and y >= min_y and y <= max_y):
+            return True
+        
+        return False
+
+
+    def min_max_xy(self):
+        """ Returns min_x, min_y, max_x, max_y canvas coordinates
+        """
+        abs_points = self.get_absolute_points()
+        abs_coords = self.pts2coords(abs_points)
+        abs_x_coords = []
+        abs_y_coords = []
+        for i in range(len(abs_coords)):
+            if i % 2 == 0:
+                abs_x_coords.append(abs_coords[i])
+            else:
+                abs_y_coords.append(abs_coords[i])
+        max_x = max(abs_x_coords)
+        min_x = min(abs_x_coords)
+        min_y = min(abs_y_coords)
+        max_y = max(abs_y_coords)
+        return (min_x,min_y,max_x,max_y)
+        
     
     def is_selected(self):
         """ Check if selected or any in the container chain is
@@ -875,7 +1052,7 @@ class BlockBlock:
             self.comps.append(comp)
 
 
-    def remove_display_objects(self):
+    def remove_display_objects(self, do_comps=False):
         """ Remove display objects associated with this component
         but not those associated only with components
         """
@@ -885,7 +1062,9 @@ class BlockBlock:
             canvas.delete(tg)
             del BlockBlock.tagged_blocks[tg]
             del self.canvas_tags[tg]
-       
+        if do_comps and hasattr(self, "comps"):
+            for comp in self.comps:
+                comp.remove_display_objects(do_comps=True)
     
     def display(self):
         """ Display thing as a list of components
@@ -942,7 +1121,7 @@ class BlockBlock:
 
 
     def new_type(self, new_type=None, modifier=None):
-        """ Create a new object of type "new_type" using all relavent
+        """ Create a new object of type "new_type" using all relevant
         characteristics of this block
         :new_type: type of new object (RoadTurn, RoadStrait currently supported)
         :modifier: type modifier e.g. "left", "right"
@@ -951,12 +1130,15 @@ class BlockBlock:
         from road_turn import RoadTurn
         track = self.get_road_track()
         if new_type == RoadStrait:    # TFD
-            new_block = self.dup()
+            new_block = RoadStrait(track,
+                                    position=self.position,
+                                    rotation=self.rotation,
+                                    origin="road_track")
         elif new_type == RoadTurn:
             if modifier == "left":
-                arc = -90.
-            elif modifier == "right":
                 arc = 90.
+            elif modifier == "right":
+                arc = -90.
             new_block = RoadTurn(track,
                                     position=self.position,
                                     rotation=self.rotation,
@@ -967,11 +1149,20 @@ class BlockBlock:
         return new_block
     
     
-    def dup(self):
-        """ Duplicate block, replacing any kwargs
+    def dup(self, level=0, max_level=10, keep_id=False, **kwargs):
+        """ Duplicate block, replacing any kwargs in destination
+        :level: recursive level, in case of recursive definitions
+        :max_level: recursive definition limit default: 10
+        :keep_id: Keep existing id, used for do/undo memory
+        :kwargs: changes to duplicated creation
         """
         duplicate = copy.deepcopy(self)
-        duplicate.id = BlockBlock.new_id()
+        for kw in kwargs:
+            setattr(duplicate, kw, kwargs[kw])
+        if keep_id:
+            duplicate.id = self.id
+        else:
+            duplicate.id = BlockBlock.new_id()
         return duplicate
 
     def __deepcopy__(self, memo):
@@ -981,7 +1172,7 @@ class BlockBlock:
         new_inst.canvas = self.canvas
         new_inst.container = self.container
         new_inst.state = self.state               # Set by others
-
+        new_inst.ctype = self.ctype
         new_inst.canvas_tags = {}           # tags if any displayed
         new_inst.origin = self.origin
         new_inst.id = self.id
@@ -1007,12 +1198,11 @@ class BlockBlock:
                 comp_copy.container = new_inst      # TBD Now: Only works for self referential
                 new_inst.comps.append(comp_copy)
         if hasattr(self, "roads"):
-            new_inst.roads = []
-            for comp in self.roads:
-                comp_copy = copy.deepcopy(comp, memo)
-                comp_copy.container = new_inst      # TBD Now: Only works for self referential
-                new_inst.roads.append(comp_copy)
-
+            new_inst.roads = {}
+            for road in self.roads.values():
+                road_copy = road.dup()
+                road_copy.container = new_inst      # TBD Now: Only works for self referential
+                new_inst.roads[road_copy.id] = road_copy
                 
         return new_inst
 
@@ -1041,6 +1231,12 @@ class BlockBlock:
         rel_new_pos = Pt(position.x+delta_x/scale.x, position.y-delta_y/scale.y)
         self.position = rel_new_pos
 
+
+    def get_position(self):
+        """ Get position relative to container
+        """
+        position = Pt(0,0) if self.position is None else self.position
+        return position
     
     def set_position(self, position=None, canvas_coord=False):
         """ Reposition block position 
@@ -1061,7 +1257,7 @@ class BlockBlock:
         
         ### HACK based on general scale from current block to top
         scale = self.scale()
-        rel_new_pos = Pt(position.x/scale.x, position.y/scale.y)
+        rel_new_pos = Pt(position.x/scale.x, 1-position.y/scale.y)
         self.position = rel_new_pos
 
     
@@ -1099,9 +1295,9 @@ class BlockBlock:
                 comp_tags = comp.get_canvas_tags(level=level+1)
                 tags.extend(comp_tags)
         if hasattr(self, "roads"):
-            for comp in self.roads:
-                comp_tags = comp.get_canvas_tags(level=level+1)
-                tags.extend(comp_tags)
+            for road in self.roads.values():
+                road_tags = road.get_canvas_tags(level=level+1)
+                tags.extend(road_tags)
         return tags
 
 
@@ -1113,6 +1309,8 @@ class BlockBlock:
         if rot is None:
             rot = 0.
         rot += rotation
+        if abs(rot) >= 360:
+            rot %= 360. 
         self.rotation = rot
         
         
@@ -1180,7 +1378,9 @@ class BlockBlock:
         cv_height = self.get_cv_height()
         height = canvas.winfo_height()
         points = []
-        for x,y in coords:
+        it = iter(coords)
+        for x in it:
+            y = next(it)
             y = cv_height - y      # down to up
             pt = Pt(x,y) 
             points.append(pt)
@@ -1224,7 +1424,7 @@ class BlockBlock:
     
     def pts2coords(self, pts):
         """ Convert homcoord points to Canvas coordinate list
-        :pts: list of homcoord Pt()
+        :pts: point/list of homcoord Pt()
         :returns: list of x1,y1,....xn,yn coordinates
         """
         if not isinstance(pts,list):
@@ -1273,4 +1473,31 @@ class BlockBlock:
             return self.over_us(point=pt)
         
         return False
-     
+
+
+        
+    
+    def front_add_type(self, new_type=None, modifier=None):
+        """ Add block_type to front end of block (e.g. road)
+        in a way to facilitate road building
+            TBD: Possibly changed to determine end of physically connected string
+        """
+        SlTrace.lg("\nfront_add_type:", "add_block")
+        SlTrace.lg("front_add_type: front_block:%s" % self, "add_block")
+        SlTrace.lg("front_add_type: points:%s" % self.get_absolute_points(), "add_block")
+        add_pos1 = self.get_front_addon_position()
+        add_pos = self.get_front_addon_position()
+        add_rot = self.get_front_addon_rotation()
+        if SlTrace.trace("add_block"):
+            abs_pos = self.container.get_absolute_point(add_pos)
+            SlTrace.lg("front_add_type: pos:%s(%s) rot:%.0f" % (add_pos, abs_pos, add_rot))
+        new_block = self.new_type(new_type, modifier)
+        if add_rot != new_block.get_rotation():
+            new_block.set_rotation(add_rot)   # Small optimization
+        SlTrace.lg("front_add_type: new_block:%s" % new_block, "add_block")
+        SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
+        new_block.move_to(position=add_pos)
+        SlTrace.lg("front_add_type: moved new_block:%s" % new_block, "add_block")
+        SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
+        ###self.set_selected(new_block, keep_old=True)
+        return new_block

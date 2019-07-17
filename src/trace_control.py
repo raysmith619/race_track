@@ -31,6 +31,8 @@ class TraceControl(Toplevel):
         self.tc_mw.protocol("WM_DELETE_WINDOW", self.delete_tc_window)
         top_frame.pack(side="top", fill="both", expand=True)
         self.top_frame = top_frame
+        tc_all_button = Button(master=self.top_frame, text="Separator", command=self.separator)
+        tc_all_button.pack(side="left", fill="both", expand=True)
         tc_all_button = Button(master=self.top_frame, text="ALL", command=self.select_all)
         tc_all_button.pack(side="left", fill="both", expand=True)
         tc_none_button = Button(master=self.top_frame, text="NONE", command=self.select_none)
@@ -101,6 +103,11 @@ class TraceControl(Toplevel):
         for flag in sorted(self.strace.getTraceFlags()):   # In display order
             self.set_trace_level(flag, 0)
 
+
+    def separator(self):
+        """ Add separator to trace log output
+        """
+        SlTrace.lg("\n\n" + 40 * "_")
 
     def breakpoint(self):
         """ Force immediate breakpoint - enter debugger

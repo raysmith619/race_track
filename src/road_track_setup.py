@@ -23,91 +23,40 @@ class RoadTrackSetup:
         self.road_track = road_track
         
         SlTrace.lg("road_track pts: %s" % self.road_track.get_absolute_points())
-
-        road_rot = 0.
+        edge_no = 0
+        road_rot = 0.               # Going up, for now              
         turn_arc = -90.
         road_width = road_track.get_road_width()
         road_length = road_track.get_road_length()       # height of entry
-        pos_inc = Pt(0, road_length)    # to next entry
         pos = Pt(1-2*road_width, 2*road_length)             # Right lower corner with a padding
-        nstrait = 8
+        
+        ###road_rot = 90               # TFD going right to left
+        ###pos = Pt(1-2*road_width, 1-road_length)
+        nstrait = 7
         origin = "road_track"
-        for i in range(nstrait):                # Edge 1
-            entry = RoadStrait(self.road_track,
-                                     rotation=road_rot,
-                                     position=pos,
-                                     origin=origin)
+        abs_pos = self.road_track.get_absolute_point(pos)
+        SlTrace.lg("Starting pos: %s %s" % (pos, self.road_track.pts2coords(abs_pos)))
+        for edge_no in range(1, 5):     # Edges 1 to 4
+            for i in range(nstrait):
+                if edge_no == 1 and i == 0:                # Edge 1
+                    entry = RoadStrait(self.road_track,
+                                             rotation=road_rot,
+                                             position=pos,
+                                             origin=origin)
+                    entry.move_to(position=pos)  #TFD
+                else:
+                    entry = entry.front_add_type(new_type=RoadStrait)
+                self.add_road(entry)
+                self.display()
+                SlTrace.lg("edge_no:%d entry:%d" % (edge_no, i))
+                SlTrace.lg("%s rot: %.0f pos: %s %s  front add: rot: %.0f pos: %s" %
+                           (entry, entry.get_rotation(), entry.get_position(), entry.abs_pos(),
+                           entry.get_front_addon_rotation(), entry.abs_front_pos()))
+            entry = entry.front_add_type(new_type=RoadTurn, modifier="left")
             self.add_road(entry)
-            SlTrace.lg("Edge 1 entry(%d) %s: pts: %s" % (i, entry.get_tag_list(), entry.get_absolute_points()))
-            pos = entry.get_top_left()
-            SlTrace.lg("Edge 1 pos(%d) %s: pts: %s" % (i, entry.get_tag_list(), self.road_track.get_absolute_point(pos)))
-
-        corner = RoadTurn(self.road_track,
-                                 arc=turn_arc,
-                                 rotation=road_rot,
-                                 position=pos,
-                                 origin=origin)
-        SlTrace.lg("Edge 1 corner %s: pts: %s" % (corner.get_tag_list(), corner.get_absolute_points()))
-        self.add_road(corner)
-         
-        road_rot += 90.
-        pos = entry.get_top_left()
-        for i in range(nstrait):                    # Edge 2
-            entry = RoadStrait(self.road_track,
-                                     rotation=road_rot,
-                                     position=pos,origin=origin)
-            self.add_road(entry)
-            SlTrace.lg("Edge 2 entry(%d) %s: pts: %s" % (i, entry.get_tag_list(), entry.get_absolute_points()))
-            pos = entry.get_top_left()
-            SlTrace.lg("Edge 2 pos(%d) %s: pts: %s" % (i, entry.get_tag_list(), self.road_track.get_absolute_point(pos)))
-        corner = RoadTurn(self.road_track,
-                                 arc=turn_arc,
-                                 rotation=road_rot,
-                                 position=pos,origin=origin)
-        SlTrace.lg("Edge 2 corner pts: %s" % corner.get_absolute_points())
-        self.add_road(corner)
-        self.display()
-        
-        pos += pos_inc
-
-        road_rot += 90
-        pos = entry.get_top_left()         # left lower to left
-        for i in range(nstrait):                        # Edge 3
-            entry = RoadStrait(self.road_track,
-                                     rotation=road_rot,
-                                     position=pos,origin=origin)
-            SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
-            self.add_road(entry)
-            pos = entry.get_top_left()
-
-        corner = RoadTurn(self.road_track,
-                                 arc=turn_arc,
-                                 rotation=road_rot,
-                                 position=pos,origin=origin)
-        SlTrace.lg("entry pts: %s" % corner.get_absolute_points())
-        self.add_road(corner)
-
-        road_rot += 90
-        pos = entry.get_top_left()
-        for i in range(nstrait):                    # Edge 4
-            entry = RoadStrait(self.road_track,
-                                     rotation=road_rot,
-                                     position=pos,origin=origin)
-            SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
-            self.add_road(entry)
-            pos = entry.get_top_left()
- 
-        corner = RoadTurn(self.road_track,
-                                 arc=turn_arc,
-                                 rotation=road_rot,
-                                 position=pos,origin=origin)
-        SlTrace.lg("entry pts: %s" % corner.get_absolute_points())
-        self.add_road(corner)
-       
-        
-        if display:
             self.display()
-            
+            SlTrace.lg("Edge %d corner %s: pts: %s" %
+                    (edge_no, entry.get_tag_list(), entry.get_absolute_points()))
  
     def display(self):
         self.road_track.display()
