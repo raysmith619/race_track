@@ -32,12 +32,14 @@ class RoadPanel(RoadBlock):
         """
         SlTrace.lg("RoadPanel: %s" % (self))
         super().__init__(container, **kwargs)
+        self.race_track = container
         if background is None:
             background = "lightgreen"
         self.background = background
         canvas = self.get_canvas()
         if canvas is None:
             self.canvas = Canvas(width=self.cv_width, height=self.cv_height)
+        
         """ Do background / scenery
         """
         bk_inset = .0001
@@ -53,7 +55,12 @@ class RoadPanel(RoadBlock):
                               width = 1.0 - 2*bk_inset,
                               xkwargs={'fill' : self.background})
         self.comps.append(background)
+        self.entries = []       # Entries e.g. roads
 
+
+    def get_race_track(self):
+        return self.race_track
+    
 
     def get_absolute_points(self, points=None):
         if points is None:
@@ -73,7 +80,19 @@ class RoadPanel(RoadBlock):
         entry.origin = origin
         self.comps.append(entry)
         self.id_blocks[entry.id] = entry
+        self.entries.append(entry)
     
+    def get_entry(self, idx=0):
+        """ Get bin entry
+        :idx: entry index default: first entry (0)
+        :returns: entry at index idx (starting at 0)
+                    Returns None if none or idx out of bounds
+        """
+        if idx < 0 or idx >= len(self.entries):
+            return None
+        
+        return self.entries[idx]      # Assuming no other entr
+
         
 if __name__ == "__main__":
     import os

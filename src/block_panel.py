@@ -38,6 +38,7 @@ class BlockPanel(BlockBlock):
         canvas = self.get_canvas()
         if canvas is None:
             self.canvas = Canvas(width=self.cv_width, height=self.cv_height)
+        self.entries = []       # entries e.g. cars, roads, ...
         """ Do background / scenery
         """
         bk_inset = .0001
@@ -54,6 +55,22 @@ class BlockPanel(BlockBlock):
                               xkwargs={'fill' : self.background})
         self.comps.append(background)
     
+    def add_entry(self, entry):
+        """ Add new entry (car/road...)
+        :entry: entry to be added
+        """
+        self.comps.append(entry)
+        self.entries.append(entry)
+    
+    def get_entry(self, idx=0):
+        """ get (car/road...)
+        :idx: entry index(starting with 0) default: 0
+        :returns: entry at idx, None if out of range
+        """
+        if idx >= 0 and idx < len(self.entries):
+            return self.entries[idx]
+        
+        return None         # None here
     
         
 if __name__ == "__main__":

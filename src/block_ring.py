@@ -1,4 +1,4 @@
-# block_polygon.py        
+# block_ring.py        
 
 from enum import Enum
 import copy
@@ -10,14 +10,16 @@ from select_error import SelectError
 
 
    
-class BlockArc(BlockBlock):
+class BlockRing(BlockBlock):
     """
-    Basic figure pie shape
+    Basic figure to be component of BlockBlock
+    a ring stripe to add arcing stripe
     """
             
     def __init__(self,
                  center=None,
                  radius=None,
+                 stripe_width=.03,   # Stripe width (half)
                  start=None,
                  arc=360.,
                  **kwargs):
@@ -25,6 +27,7 @@ class BlockArc(BlockBlock):
         :radius: fraction of container default=.5
         :center: position of center in block
                 default Pt(width/2, height/2)
+        :stripe_width: 1/2 the with for stripe
         :start: angle starting default=0 deg (up)
         :arc: arc in degrees default=360 deg (counter clockwise)
 
@@ -63,7 +66,7 @@ class BlockArc(BlockBlock):
         if radius is None:
             radius = width/2.
         self.radius = radius
-
+        self.stripe_width = stripe_width
         if center is None:
             center = Pt(.5, .5)
         self.center = center
@@ -77,14 +80,22 @@ class BlockArc(BlockBlock):
         inc_angle = (end_angle-self.start)/nstep
         rad = self.radius                # Circle centered in the middle
         ct = self.center
-        pts.append(ct)
-        for i in range(nstep+1):
-            angle = self.start + i * inc_angle
-            theta = radians(angle)          # In radians
-            pt_x = rad * sin(theta)
-            pt_y = rad * cos(theta)
-            pt = Pt(ct.x+pt_x, ct.y+pt_y)
-            pts.append(pt)
+                            # Two concentric circles(or peaces of
+        for cir_i in range(2):
+            if cir_i == 0:
+                rad = self.radius - self.stripe_width
+            else:
+                rad = self.radius + self.stripe_width
+            for i in range(nstep+1):
+                if cir_i == 0:
+                    angle = self.start + i * inc_angle
+                else:
+                    angle = self.start + (nstep-i) * inc_angle
+                theta = radians(angle)          # In radians
+                pt_x = rad * sin(theta)
+                pt_y = rad * cos(theta)
+                pt = Pt(ct.x+pt_x, ct.y+pt_y)
+                pts.append(pt)
         self.points = pts
 
 
@@ -93,6 +104,7 @@ class BlockArc(BlockBlock):
         """
         new_inst = super().__deepcopy__(memo)
         new_inst.center = self.center
+        new_inst.stripe_width = self.stripe_width
         new_inst.points = []
         new_inst.points.extend(self.points)
         new_inst.radius = self.radius

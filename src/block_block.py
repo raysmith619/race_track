@@ -516,14 +516,6 @@ class BlockBlock:
 
 
     def get_position_coords(self):
-        """ Get canvas coordinate list for position
-        """
-        abs_pos = self.get_absolute_position()
-        coords = self.pts2coords([abs_pos])
-        return coords
-
-
-    def abs_pos(self):
         """ Provide absolute canvas coordinates of block's position
         :returns: return coordinate list(x,y) of coordinates
         """
@@ -616,9 +608,21 @@ class BlockBlock:
             elif SlTrace.trace("display_points"):            
                 SlTrace.lg("\nabsolute points[%s]=%s" % (self.get_tag_list(), pts))
         return pts
-        
-        
 
+
+    def get_center_coords(self, points=None):
+        points = self.get_absolute_points()
+        p_x, p_y = points[0].xy
+        for point in points[1:]:
+            p_x += point.x
+            p_y += point.y
+        p_x /= len(points)
+        p_y /= len(points)
+        pt = Pt(p_x, p_y)
+        coords = self.pts2coords(pt)
+        return coords
+    
+    
     def get_inverse_points(self, points=None):
         """ Get points relative to container's coordinate system
             based on absolute points
@@ -663,6 +667,26 @@ class BlockBlock:
         """ Get full inverse transform from top level through this component
         """
         return BlockBlock.get_transform_inverse(self)
+
+    def get_length(self):
+        """ Get length, relative to its container, of this block
+        :returns: relative rotation in degrees
+        """
+        length = 1. if self.height is None else self.height
+        return length
+
+    def get_width(self):
+        """ Get length, relative to its container, of this block
+        :returns: relative rotation in degrees
+        """
+        width = 1. if self.width is None else self.width
+        return width
+
+
+    def get_length_dist(self):
+        """ Determine traversal length as fraction of container's length for the road
+        """
+        return self.get_length()
     
 
     def get_relative_points(self, points=None):
@@ -731,7 +755,7 @@ class BlockBlock:
         :returns: rotation of addon block in containers reference
                     None if no rotation, treated as 0. deg
         """
-        return self.rotation
+        return self.get_rotation()
 
 
     def get_back_addon_position(self, new_type=None):
@@ -1052,9 +1076,10 @@ class BlockBlock:
             self.comps.append(comp)
 
 
-    def remove_display_objects(self, do_comps=False):
+    def remove_display_objects(self, do_comps=True):
         """ Remove display objects associated with this component
         but not those associated only with components
+        :do_comps: True - remove objects of all components
         """
         canvas = self.get_canvas()
         for tg in list(self.canvas_tags.keys()):
@@ -1120,7 +1145,7 @@ class BlockBlock:
         ###self.display()
 
 
-    def new_type(self, new_type=None, modifier=None):
+    def new_type(self, new_type=None, modifier=None, **kwargs):
         """ Create a new object of type "new_type" using all relevant
         characteristics of this block
         :new_type: type of new object (RoadTurn, RoadStrait currently supported)
@@ -1128,12 +1153,13 @@ class BlockBlock:
         """
         from road_strait import RoadStrait
         from road_turn import RoadTurn
+        from car_simple import CarSimple
         track = self.get_road_track()
         if new_type == RoadStrait:    # TFD
             new_block = RoadStrait(track,
                                     position=self.position,
                                     rotation=self.rotation,
-                                    origin="road_track")
+                                    origin="road_track", **kwargs)
         elif new_type == RoadTurn:
             if modifier == "left":
                 arc = 90.
@@ -1143,7 +1169,17 @@ class BlockBlock:
                                     position=self.position,
                                     rotation=self.rotation,
                                     arc=arc,
-                                    origin="road_track")
+                                    origin="road_track", **kwargs)
+        elif new_type == CarSimple:
+            if modifier == "red":
+                base_color = "red"
+            elif modifier == "blue":
+                base_color = "blue"
+            new_block = CarSimple(track,
+                                    position=self.position,
+                                    rotation=self.rotation,
+                                    base_color=base_color,
+                                    origin="road_track", **kwargs)
         else:
             raise SelectError("Unsupported type for new_type: %s" % new_type)
         return new_block

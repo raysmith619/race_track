@@ -48,8 +48,9 @@ class PositionWindow(SelectControlWindow):
         self.set_button(field="spin_flip", label="Spin Left", command=self.spin_left)
         self.set_button(field="spin_flip", label="Spin Right", command=self.spin_right)
         
-        self.set_button(field="spin_flip", label="Flip Up/Down", command=self.flip_up_down)
-        self.set_button(field="spin_flip", label="Flip Left/Right", command=self.flip_left_right)
+        if SlTrace.trace("flip_support"):
+            self.set_button(field="spin_flip", label="Flip Up/Down", command=self.flip_up_down)
+            self.set_button(field="spin_flip", label="Flip Left/Right", command=self.flip_left_right)
         
         add_delete_frame = Frame(controls_frame)
         add_delete_frame.pack(anchor="w", side="left", fill="x", expand=True)
@@ -63,14 +64,16 @@ class PositionWindow(SelectControlWindow):
         self.set_button(field="add", label="Strait", command=self.front_add_strait)
         self.set_button(field="add", label="Left Turn", command=self.front_add_left_turn)
         self.set_button(field="add", label="Right Turn", command=self.front_add_right_turn)
+        self.set_button(field="add", label="Red Car", command=self.front_add_red_car)
+        self.set_button(field="add", label="Blue Car", command=self.front_add_blue_car)
         
-
-        add_back_frame = Frame(add_frame)
-        add_back_frame.pack(side="top", fill="x", expand=True)
-        self.set_fields(add_back_frame, "add", title="Add to Back")
-        self.set_button(field="add", label="Strait", command=self.back_add_strait)
-        self.set_button(field="add", label="Left Turn", command=self.back_add_left_turn)
-        self.set_button(field="add", label="Right Turn", command=self.back_add_right_turn)
+        if SlTrace.trace("add_to_back_support"):
+            add_back_frame = Frame(add_frame)
+            add_back_frame.pack(side="top", fill="x", expand=True)
+            self.set_fields(add_back_frame, "add", title="Add to Back")
+            self.set_button(field="add", label="Strait", command=self.back_add_strait)
+            self.set_button(field="add", label="Left Turn", command=self.back_add_left_turn)
+            self.set_button(field="add", label="Right Turn", command=self.back_add_right_turn)
 
         above_delete_frame = Frame(add_delete_frame)
         above_delete_frame.pack(anchor="w", side="top", fill="both", expand=True)
@@ -139,6 +142,12 @@ class PositionWindow(SelectControlWindow):
     
     def front_add_right_turn(self):
         self.change_control("front_add_right_turn")
+    
+    def front_add_red_car(self):
+        self.change_control("front_add_red_car")
+    
+    def front_add_blue_car(self):
+        self.change_control("front_add_blue_car")
 
     def back_add_strait(self):
         self.change_control("back_add_strait")
@@ -148,6 +157,12 @@ class PositionWindow(SelectControlWindow):
     
     def back_add_right_turn(self):
         self.change_control("back_add_right_turn")
+    
+    def front_add_red_car(self):
+        self.change_control("front_add_red_car")
+    
+    def front_add_blue_car(self):
+        self.change_control("front_add_blue_car")
     
     def delete_front(self):
         self.change_control("delete_front")

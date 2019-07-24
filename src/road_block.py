@@ -12,7 +12,6 @@ from select_trace import SlTrace
 from select_error import SelectError
 
 from block_block import BlockBlock, BlockType
-from wx.lib.gizmos.dynamicsash import DS_DRAG_CORNER
 
 class RoadType(Enum):
     COMPOSITE = 1
@@ -42,6 +41,13 @@ class RoadBlock(BlockBlock):
                 road_width=None,
                 road_length=None,
                 surface=None,
+                median_width=.03,
+                median_x=.5,
+                off_edge=.02,
+                edge_width=.0,
+                front_road=None,
+                back_road=None,
+                road_width_feet=45,
                 **kwargs):
         """ Setup Road object
         :container: Road object containing this object
@@ -52,14 +58,26 @@ class RoadBlock(BlockBlock):
                         default: track's road_width
         :road_length:  road's length as fraction of width
                         default: track's road_length
+        :median_width: width of median line
+        :median_x:    position of median line within width
+        :off_edge:    spacing of edge lines off edge
+        :edge_width: width of edge lines
+        :front_road: road connected in front, if one default: None
+        :back_road: road for which this is a front_road
         """
         SlTrace.lg("\nRoadBlock: %s %s container: %s" % (road_type, self, container))    
         self.road_type = road_type
         self.road_width = road_width 
         self.road_length = road_length
+        self.median_width = median_width
+        self.median_x = median_x
+        self.off_edge = off_edge
+        self.edge_width = edge_width
         if surface is None and container is not None:
             surface = container.surface
         self.surface = surface
+        self.front_road = front_road
+        self.back_road = back_road
         super().__init__(container=container, **kwargs)        
 
 
@@ -71,7 +89,8 @@ class RoadBlock(BlockBlock):
         new_inst.road_width = self.road_width
         new_inst.road_length = self.road_length
         new_inst.surface = self.surface
-                
+        new_inst.front_road = self.front_road       # shallow        
+        new_inst.back_road = self.back_road       # shallow        
         return new_inst
         
         
@@ -97,11 +116,17 @@ class RoadBlock(BlockBlock):
             comp.display()
         self.task_update()
 
-
     def get_road_track(self):
         top = self.get_top_container()
         return top
-    
+
+    def get_race_track(self):
+        road_track = self.get_road_track()
+        race_track = road_track.get_race_track()
+        return race_track
+ 
+    def get_road_width_feet(self):
+        return self.get_road_track().get_road_width_feet()
 
     def get_road_width(self):
         """ Get road width in fraction of container
@@ -119,8 +144,111 @@ class RoadBlock(BlockBlock):
             return self.container.get_road_length()
         
         return self.road_length
+
+
+    def get_back_road(self):
+        """ Get previous road in chain, if one
+        :returns: previous road, None if none
+        """
+        return self.back_road
+
+
+    def get_front_road(self, allow_close=True):
+        """ Get next road in chain, if one
+        If no immediate chain is found, check for close one
+        and add it if found.
+        :returns: next road, None if none
+        """
+        if self.front_road is not None:
+            return self.front_road
+        
+        if not allow_close:
+            return None         # Don't allow close checking
+    
+        race_track = self.get_race_track()
+        if race_track is None:
+            return None
+        
+        add_pos_coords = self.abs_front_pos()
+        connected_roads = race_track.get_entry_at(*add_pos_coords, entry_type="road", all=True)
+        if len(connected_roads) < 2:
+            return None         # Need another close
+        
+        front_road = None
+        for rd in connected_roads:
+            if rd.id != self.id:
+                front_road = rd
+                if front_road.is_front_of(self):
+                    self.link_roads(front_road)
+                    return front_road
+                
+        return None                 # None close
         
 
+    def get_turn_speed(self):
+        """ Get reduced speed for turns
+        """
+        return 10           #MPH
+    
+    def get_strait_acc(self):
+        """ Get acceleration on strait away
+        """
+        return 10
+
+
+    def get_position_at(self, dist=0., side_dist=0.):
+        """ Get road position at distance within the road segment
+        approximate by a linear interperlation of start and end
+        :dist: fractional distance through the road segment
+        :side_dist: Adjust return position by this distance,
+                 as a fraction of the width, from left edge
+        """
+        end_position = self.get_front_addon_position()
+        start_position = self.get_position()
+        chg_position = (end_position-start_position)
+        leng_dist = self.get_length_dist()
+        fract_dist = dist/leng_dist
+        chg_x = chg_position.x * fract_dist
+        chg_y = chg_position.y * fract_dist
+        position = Pt(start_position.x+chg_x, start_position.y+chg_y)
+        if side_dist != 0.:
+            rotation = self.get_rotation_at(dist=dist)
+            norm_rot = rotation - 90.           # Rotate 90deg towards right side
+            theta = radians(norm_rot)
+            sd = side_dist*self.get_width()
+            ###sd = side_dist                      # HACK
+            side_pt_polar = Polar(sd, theta)
+            side_pt = side_pt_polar.toCartesian()
+            ### HACK
+            ep = .001
+            norm_rot %= 360.
+            if norm_rot < 0:
+                norm_rot += 360.
+            if norm_rot >= 0 and norm_rot < 90.-ep:         # road left
+                side_pt = Pt(0,sd)
+            elif norm_rot >= 90 and norm_rot < 180.-ep:     # road down
+                side_pt = Pt(-sd,0)
+            elif norm_rot >= 180 and norm_rot < 270.-ep:    # road right
+                side_pt = Pt(0,-sd)                     
+            elif norm_rot >= 270.-ep:                       # road up
+                side_pt = Pt(sd,0)
+            ### HACK END
+                
+            position += side_pt
+        return position
+
+
+    def get_rotation_at(self, dist=0.):
+        """ Get road rotation at distance within the road segment
+        approximate by a linear interperlation of start and end
+        :dist: fractional distance through the road segment
+        """
+        end_rotation = self.get_front_addon_rotation()
+        start_rotation = self.get_rotation()
+        leng_dist = self.get_length_dist()
+        rotation = start_rotation + abs(end_rotation-start_rotation)* dist/leng_dist
+        return rotation
+    
     def get_road_rotation(self):
         """ Get road rotation in degrees
         Adds in  container or track rotation if any
@@ -139,7 +267,59 @@ class RoadBlock(BlockBlock):
             rot2 = rot
         return rot2
 
+    def is_front_of(self, road, rotation_diff=.0001, position_diff=.0001):
+        """ Determine if we are placed so as to be exactly in front of road
+        :road: candidate back road
+        """
+        road_front_rotation = self.get_rotation()
+        road_front_position = self.get_position()
+        
+        road_back_rotation = road.get_front_addon_rotation()
+        road_back_position = road.get_front_addon_position()
+        if abs(road_front_rotation-road_back_rotation) > rotation_diff:
+            return False
+        
+        if road_front_position.dist(road_back_position) > position_diff:
+            return False
+        
+        return True
+
+    def link_roads(self, road):
+        """ link this road with road in front of it
+        :road:  link road as our front road and us as road's back_road
+        """
+        self.front_road = road
+        road.back_road = self
+         
 
     def get_road_surface(self):
         return self.track.get_road_surface()
+
+
+
+
     
+    def show_add_on_selects(self, add_on_types=None, **kwargs):
+        """ Dispplay areas which, by mouse selection, can be added to track.
+        :returns: list of selection block objects
+        """
+        selects = []
+        if add_on_types is None:
+            add_on_types = type(self)
+        if not isinstance(add_on_types, list):
+            add_on_types = [add_on_types]
+        add_pos = self.get_front_addon_position()
+        add_rot = self.get_front_addon_rotation()
+        if len(kwargs) == 0:
+            kwargs = {'background' : 'pink'}
+            kwargs['xkwargs'] = {'fill' : 'pink'}
+        for add_on_type in add_on_types:
+            new_block = self.new_type(add_on_type, **kwargs)
+            if add_rot != new_block.get_rotation():
+                new_block.set_rotation(add_rot)   # Small optimization
+            new_block.move_to(position=add_pos)
+            new_block.display()
+            selects.append(new_block)
+        
+        return selects
+        

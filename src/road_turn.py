@@ -3,6 +3,7 @@
 Road turning block
 """
 import copy
+from math import *
 from homcoord import *
 
 
@@ -11,8 +12,8 @@ from select_error import SelectError
 
 from block_block import BlockBlock, BlockType
 from block_arc import BlockArc
+from block_ring import BlockRing
 from road_block import RoadBlock, RoadType
-from matplotlib.patches import Arc
    
 class RoadTurn(RoadBlock):
     """
@@ -86,15 +87,55 @@ class RoadTurn(RoadBlock):
             arc_cent = Pt(0,0)  # Left Turn
         else:
             arc_cent = Pt(1,0)  # Right Turn
+        median_width = self.median_width
+        median_x = self.median_x
+        off_edge = self.off_edge
+        edge_width = self.edge_width
+
+        xkwargs = self.xkwargs
+        if xkwargs is None:
+            xkwargs = {'fill' : 'black'}
+            
         turn = BlockArc(container=self,
                             tag=tag,
                             ###rotation=self.rotation-90,
                             center=arc_cent,
                             radius=1,
                             arc=arc,
-                            xkwargs={'fill' : 'black'})
+                            xkwargs=xkwargs)
         self.comps.append(turn)
 
+        median_strip = BlockRing(container=self,
+                            tag=tag,
+                            ###rotation=self.rotation-90,
+                            center=arc_cent,
+                            radius=median_x,
+                            stripe_width=median_width,
+                            arc=arc,
+                            xkwargs={'fill' : 'yellow'})
+        self.comps.append(median_strip)
+
+        inner_edge = BlockRing(container=self,
+                            tag=tag,
+                            ###rotation=self.rotation-90,
+                            center=arc_cent,
+                            radius=off_edge,
+                            stripe_width=edge_width,
+                            arc=arc,
+                            xkwargs={'fill' : 'white'})
+        self.comps.append(inner_edge)
+        
+        outer_edge_width = edge_width
+        outer_edge = BlockRing(container=self,
+                            tag=tag,
+                            ###rotation=self.rotation-90,
+                            center=arc_cent,
+                            radius=1-off_edge-outer_edge_width/2,
+                            stripe_width=outer_edge_width,
+                            arc=arc,
+                            xkwargs={'fill' : 'white'})
+        self.comps.append(outer_edge)
+        
     def __deepcopy__(self, memo):
         """ Hook to avoid deep copy where not appropriate
         """
@@ -120,10 +161,8 @@ class RoadTurn(RoadBlock):
                     None if no rotation, treated as 0. deg
         """
         arc = self.get_arc()
-        rotation = self.rotation
-        if rotation is None:
-            rotation = 0.
-        add_rot = rotation + arc
+        rotation = self.get_rotation()
+        add_rot = (rotation + arc) % 360.
         if SlTrace.trace("get_front_addon"):
             tlc = self.get_relative_point(Pt(0,1))
             container = self.container if self.container is not None else self
@@ -176,4 +215,14 @@ class RoadTurn(RoadBlock):
                             arc=arc,
                             xkwargs=old_arc.xkwargs)
         self.comps[0] = new_arc
+
+
+    def get_length_dist(self):
+        """ Determine traversal length for the road in terms of fraction of container
+        Treat the distance as the outside perimeter of the arc
+        """
+        arc = self.get_arc()
+        radius = self.get_length()
+        dist = radius*2*pi*arc/360.
+        return dist
         

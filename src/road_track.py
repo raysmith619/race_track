@@ -18,6 +18,7 @@ from block_text import BlockText
 from block_check import BlockCheck
 from road_block import RoadBlock,SurfaceType
 from road_strait import RoadStrait
+from car_block import CarBlock
 
    
 class RoadTrack(BlockPanel):
@@ -30,57 +31,104 @@ class RoadTrack(BlockPanel):
             
     def __init__(self,
                 road_width=.05,
+                road_width_feet=45.,
                 road_length=.05*2,
+                minimum_speed=5.,
+                maximum_speed=100,
+                ncar=2,
+                update_interval=.01,
+                turn_speed=5.,
+                car_width=None,
+                car_length=None,
                 surface=SurfaceType.DEFAULT,
                 **kwargs
                 ):
         """ Setup object
+        :car_width: car width as a fraction of track's width dimensions
+                default: road_width/2.5
+        :car_length: car width as a fraction of track's width dimensions
+                default: car_width * 2.5
         :road_width: road width as a fraction of track's width dimensions'
                 e.g. 1,1 with container==None ==> block is whole canvas
         :road_length: road width as a fraction of track's width dimensions'
                 e.g. 1,1 with container==None ==> block is whole canvas
-        :surface: road surface type - determines look and operation/handeling                                                    collisions)
+        :surface: road surface type - determines look and operation/handeling
+        :ncar: default number of cars in race
+        NOTE: container is race_track                                                    collisions)
         """
         SlTrace.lg("RoadTrack: %s" % (self))
+        if car_width is None:
+            car_width = road_width/2.5
+        self.car_width = car_width
+        if car_length is None:
+            car_length = car_width*2.5
+        self.car_length = car_length
         super().__init__(**kwargs)
         if self.container is None:
             canvas = self.get_canvas()
             if canvas is None:
                 self.canvas = Canvas(width=self.cv_width, height=self.cv_height)
+        self.minimum_speed = minimum_speed
+        self.maximum_speed = maximum_speed
+        self.ncar = ncar
+        self.turn_speed = turn_speed
+        self.update_interval = update_interval
+        self.race_track = self.container
         self.roads = {}     # road sections of the track by block id
+        self.cars = {}      # cars in track by block id
         self.road_width = road_width
         self.road_length = road_length
         self.surface = surface
         self.background = "lightgreen"
+        self.road_width_feet = road_width_feet
 
-
-    def add_entry(self, entry, origin="road_track"):
+    def add_entry(self, entries, origin="road_track"):
         """ Add next entry
-        :entry: completed entry
-        :origin: origin of block, used to id starting point
+        :entries: single or list of entities (cars,roads) 
+        :origin: origin of block, if not already specified in entry starting point
         """
-        entry.origin = origin
-        self.roads[entry.id] = entry
-        self.id_blocks[entry.id] = entry
+        if not isinstance(entries, list):
+            entries = [entries]
         
-    def add_road(self, roads):
-        """ Add one or more road parts
-        :roads: one or list of components
-        """
-        if not isinstance(roads, list):
-            roads = [roads]
-        for road in roads:
-            BlockBlock.id_blocks[road.id] = road
-            self.add_entry(road)
+        for entry in entries:
+            if entry.origin is None:
+                entry.origion = origin
+            if issubclass(type(entry), RoadBlock):
+                self.roads[entry.id] = entry
+            else:
+                self.cars[entry.id] = entry
+            self.id_blocks[entry.id] = entry
 
-    def remove_road(self, road_id):
-        """ Remove road from track
-        :road_id: road's block id
-        """
-        if road_id in self.roads:
-            del self.roads[road_id]
 
-            
+    def remove_entry(self, entries_ids):
+        """ Remove entry(s) from track
+        :entries_ids: entries/ids
+        """
+        if not isinstance(entries_ids, list):
+            entries_ids = [entries_ids]     # list of one
+        for entry_id in entries_ids:
+            if isinstance(entry_id, int):
+                entry = self.id_blocks[entry_id]
+            else:
+                entry = entry_id
+                entry_id = entry.id
+            if issubclass(type(entry), RoadBlock):
+                if entry_id in self.roads:
+                    if SlTrace.trace("delete"):
+                        SlTrace.lg("delete road: %d" % entry_id)
+                    road = self.roads[entry_id]
+                    self.clear_selected_block(entry_id)
+                    road.remove_display_objects()
+                    del self.roads[entry_id]
+            else:
+                if entry_id in self.cars:
+                    if SlTrace.trace("delete"):
+                        SlTrace.lg("delete car: %d" % entry_id)
+                    self.clear_selected_block(entry_id)
+                    car = self.cars[entry_id]
+                    car.remove_display_objects()
+                    del self.cars[entry_id]
+             
             
     def display(self):
         """ Display thing as a list of components
@@ -91,14 +139,58 @@ class RoadTrack(BlockPanel):
         super().display()
         for road in self.roads.values():
             road.display()
+        for car in self.cars.values():
+            car.display()
 
 
-
+    def get_race_track(self):
+        """ Get top level controler
+        """
+        if self.container is not None:
+            return self.container
+        
+        return self
+    
+    
     def get_road(self, road_id):
         """ Get road on track
         """
         if road_id in self.roads:
             return self.roads[road_id]
+        
+        return None
+        
+
+    def get_entry_at(self, x=None, y=None, entry_type=None, all=False):
+        """ Return car/road at canvas coordinates
+        :x: x canvas coordinate
+        :y: y canvas coordinate
+        :entry_type: get only entries of this type "car", "road"
+                default: all types
+        :all: if True return list of all entries which contain this coordinate
+              if False just first block found which contains this coordinate
+        :returns: if all - returns list of all entries found
+                    else - returns entry found, else None
+        """
+        entries_found = []
+        if entry_type is None or entry_type == "car":
+            for entry in self.cars.values():
+                if entry.is_at(x=x, y=y):
+                    entries_found.append(entry)
+                    if not all:
+                        break
+        if all or len(entries_found) == 0:
+            if entry_type is None or entry_type == "road":
+                for entry in self.roads.values():
+                    if entry.is_at(x=x, y=y):
+                        entries_found.append(entry)
+                        if not all:
+                            break
+        if all:
+            return entries_found
+        
+        if entries_found:
+            return entries_found[0]
         
         return None
             
@@ -107,10 +199,22 @@ class RoadTrack(BlockPanel):
         return self.surface
         
 
+    def get_car_width(self):
+        """ Get car width with respect to container
+        """
+        return self.car_width
+        
+
     def get_road_width(self):
-        """ Get road width with respect to container
+        """ Get road width in with respect to container
         """
         return self.road_width
+        
+
+    def get_road_width_feet(self):
+        """ Get road width in feet
+        """
+        return self.road_width_feet
         
 
     def get_road_width_pixel(self):
@@ -119,6 +223,12 @@ class RoadTrack(BlockPanel):
         w = self.road_width
         wpi = w * self.get_cv_width()
         return wpi
+        
+
+    def get_car_length(self):
+        """ Get car length with respect to container
+        """
+        return self.car_length
         
 
     def get_road_length(self):
@@ -133,6 +243,27 @@ class RoadTrack(BlockPanel):
         l = self.road_length    # Scale against track/canvas width
         lpi = l * self.get_cv_width()
         return lpi
+
+
+    def get_minimum_speed(self):
+        """ Minimum driving speed for car
+        in mph
+        """
+        return self.minimum_speed
+
+
+    def get_maximum_speed(self):
+        """ Maximum driving speed for car
+        in mph
+        """
+        return self.maximum_speed
+
+
+    def get_turn_speed(self):
+        """ Maximum driving speed for car
+        in mph
+        """
+        return self.turn_speed
         
 
     def get_road_rotation(self):

@@ -13,7 +13,6 @@ from homcoord import *
 from select_trace import SlTrace
 from select_error import SelectError
 from block_window import BlockWindow
-from road_track import RoadTrack
 from block_panel import BlockPanel
 from block_block import BlockBlock,BlockType
 from block_polygon import BlockPolygon
@@ -21,11 +20,13 @@ from road_block import RoadBlock,SurfaceType
 from road_strait import RoadStrait
 from race_track import RaceTrack
 from road_bin_setup import RoadBinSetup
+from car_bin_setup import CarBinSetup
 from road_track_setup import RoadTrackSetup
 from road_block import RoadBlock
 from road_turn import RoadTurn
 from block_arc import BlockArc
 from position_window import PositionWindow
+from race_control_window import RaceControlWindow
 
 SlTrace.setFlags("short_points,starter_track,down"
                  + ",add_block,mouse_right_info")
@@ -33,25 +34,43 @@ SlTrace.setFlags("short_points,starter_track,down"
 width = 600     # Window width
 height = width  # Window height
 rotation = None # No rotation
+maximum_speed = 20  # Maximum car speed mph
+minimum_speed = 5  # Maximum car speed mph
+maximum_speed = 10.
+minimum_speed = 1.
+ncar = 3
+turn_speed = 2.
 pos_x = None
 pos_y = None
 parser = argparse.ArgumentParser()
 dispall = False      # Display every change
 starter_track = True
+starter_track = False
+update_interval = .02
 
 parser.add_argument('--width=', type=int, dest='width', default=width)
 parser.add_argument('--height=', type=int, dest='height', default=height)
+parser.add_argument('--maximum_speed=', '-mas', type=float, dest='maximum_speed', default=maximum_speed)
+parser.add_argument('--minimum_speed=', '-mis', type=float, dest='minimum_speed', default=maximum_speed)
+parser.add_argument('--ncar=', '-nc', type=int, dest='ncar', default=ncar)
+parser.add_argument('--turn_speed=', '-tus', type=float, dest='turn_speed', default=turn_speed)
 parser.add_argument('--pos_x=', type=float, dest='pos_x', default=pos_x)
 parser.add_argument('--pos_y=', type=float, dest='pos_y', default=pos_y)
 parser.add_argument('--rotation=', type=float, dest='rotation', default=rotation)
-parser.add_argument('--starter_track', '-st', type=float, dest='starter_track', default=starter_track)
+parser.add_argument('--starter_track', '-st', type=bool, dest='starter_track', default=starter_track)
+parser.add_argument('--update_interval', '-ui', type=float, dest='update_interval', default=update_interval)
 args = parser.parse_args()             # or die "Illegal options"
 
 width = args.width
 height = args.height
 pos_x = args.pos_x
 pos_y = args.pos_y
+maximum_speed = args.maximum_speed
+minimum_speed = args.minimum_speed
+ncar = args.ncar
 rotation = args.rotation
+starter_track = args.starter_track
+update_interval = args.update_interval
 
 SlTrace.lg("%s %s\n" % (os.path.basename(sys.argv[0]), " ".join(sys.argv[1:])))
 SlTrace.lg("args: %s\n" % args)
@@ -98,17 +117,27 @@ if pos_x is not None or pos_y is not None:
 tR = RaceTrack(mw=mw, canvas=canvas, width=th_width, height=th_height,
                position=position,
                cv_width=width, cv_height=height,
-               rotation=rotation)
+               rotation=rotation,
+               maximum_speed=maximum_speed,
+               minimum_speed=maximum_speed,
+               ncar=ncar,
+               turn_speed=turn_speed,
+               update_interval=update_interval)
 tR.display()
 pos_ctl = PositionWindow("Part Positioning",
                          change_control_proc=tR.pos_change_control_proc)    
+race_ctl = RaceControlWindow("Race Control",
+                         command_control_proc=tR.race_control_proc)    
+road_bin = tR.get_road_bin()
+RoadBinSetup(road_bin)
+
+car_bin = tR.get_car_bin()
+CarBinSetup(car_bin)
 
 if starter_track:
     road_track = tR.get_road_track()
     RoadTrackSetup(road_track)
 
-road_bin = tR.get_road_bin()
-RoadBinSetup(road_bin)
 tR.set_reset()
 
 
