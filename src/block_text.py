@@ -25,17 +25,20 @@ class BlockText(BlockBlock):
         :font_size: font size default:12
         """
         super().__init__(**kwargs)
+        if self.container is None:
+            raise SelectError("BlockText %s missing container parameter" % text)
+        
         if text is None:
             raise SelectError("Required text parameter is missing")
         
         self.text = text
         self.font_name = font_name
         self.font_size = font_size
-        if self.height is None:     # TBD font specific
+        '''if self.height is None:     # TBD font specific
             self.height = .03
         if self.width is None:
             self.width = self.height*.5*len(text)
- 
+         '''
     def display(self):
         """ Display text in canvas
         """

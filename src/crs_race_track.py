@@ -29,6 +29,7 @@ from position_window import PositionWindow
 from race_control_window import RaceControlWindow
 
 SlTrace.setFlags("short_points,starter_track,down"
+                 + ",front_road"
                  + ",add_block,mouse_right_info")
 
 width = 600     # Window width

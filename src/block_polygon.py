@@ -55,7 +55,7 @@ class BlockPolygon(BlockBlock):
         """
         canvas = self.get_canvas()
         if canvas is None:
-            SlTrace("NO canvas")
+            raise SelectError("NO canvas")
             
         if SlTrace.trace("display_polygon"):
             if len(self.points) < 10 and SlTrace.trace("short_points"):
@@ -84,6 +84,8 @@ class BlockPolygon(BlockBlock):
                 SlTrace.lg("display_polygon(coords:%s, kwargs=%s" % (coords, self.xkwargs))
             elif  SlTrace.trace("display_points"):
                 SlTrace.lg("display_polygon(coords:%s, kwargs=%s" % (coords, self.xkwargs))
+        if self.color is not None and not hasattr(self.xkwargs, 'fill'):
+            self.xkwargs['fill'] = self.color                   # Use color if specified and not overridden
         if self.is_selected():
             self.xkwargs['outline'] = "red"
             self.xkwargs['width'] = 3

@@ -8,10 +8,6 @@ import sys, traceback
 
 from select_trace import SlTrace
 from select_error import SelectError
-from wx.lib.sized_controls import border
-from _hashlib import new
-from wx import CONTROL_SELECTED
-
 
 class BlockType(Enum):
     COMPOSITE = 1
@@ -87,6 +83,7 @@ class BlockBlock:
       position    Pt()  within container
       width       0.to 1 of container width
       height      0. to 1 of container height
+      color        default color
       rotation    rotation (degrees counter clockwise) relative to container
                   0 = pointing to right (positive x)
       velocity    velocity: x,y / second
@@ -276,10 +273,11 @@ class BlockBlock:
             select_origin = block.origin
             sids = list(cls.selects.keys())
             for sid in sids:
-                sid_block = cls.selects[sid].block
-                if sid_block.origin == select_origin:
-                    SlTrace.lg("Clearing selected %s" % sid_block)
-                    cls.clear_selected(sid)
+                if sid in cls.selects:
+                    sid_block = cls.selects[sid].block
+                    if sid_block.origin == select_origin:
+                        SlTrace.lg("Clearing selected %s" % sid_block)
+                        cls.clear_selected(sid)
         if x_coord is None:
             if block is not None:
                 x_coord, y_coord = block.position.xy    # Use block position               
@@ -404,6 +402,7 @@ class BlockBlock:
                  canvas=None,
                  cv_width=None,
                  cv_height=None,
+                 color=None,
                  container=None,
                  ctype=BlockType.COMPOSITE,
                  position=None,
@@ -421,6 +420,7 @@ class BlockBlock:
         :canvas: optional canvas argument - provides Canvas if no container
         :cv_width: optional canvas width
         :cv_height: optional canvas height
+        :color:  block's basic color
         :container: containing object(BlockBlock), default: this is the base object
         :ctype: container type defalut:COMPOSITE
         :width: width as a fraction of container's width dimensions'
@@ -452,12 +452,16 @@ class BlockBlock:
         self.canvas = canvas
         self.cv_width = cv_width
         self.cv_height = cv_height
+        self.color = color
         self.container = container
+        if container is None:
+            SlTrace.lg("block: %s has None container" % self)
         if background is None:
             background = "white"
         self.background = background
-        SlTrace.lg("\nBlockBlock[%d]:%s %s %s container: %s" % (self.id, tag, ctype, self, container))
-        SlTrace.lg("tag_list: %s" % self.get_tag_list(), "block_create")    
+        if SlTrace.trace("block_create"):
+            SlTrace.lg("\nBlockBlock[%d]:%s %s %s container: %s" % (self.id, tag, ctype, self, container))
+            SlTrace.lg("tag_list: %s" % self.get_tag_list())    
         self.comps = []     # List of components
         self.ctype = ctype
 
@@ -554,7 +558,7 @@ class BlockBlock:
         """
         if points is None:
             if not hasattr(self, "points"):
-                points = [Pt(0,0), Pt(0,1), Pt(1,1), Pt(1,0)]       # Boundaries
+                points = self.get_perimeter_points()  # Boundaries
             else:
                 points = self.points
 
@@ -610,7 +614,19 @@ class BlockBlock:
         return pts
 
 
-    def get_center_coords(self, points=None):
+    def get_coords(self, internal_points=None):
+        """ Return coordinates, given internal points, e.g., 0,0 == local version of position()
+        :internal_points: points relative to block 0,0 -> lower left corner, 1,1 upper right corner
+                default: perimeter
+        """
+        if internal_points is None:
+            internal_points = self.get_perimeter_points()
+        abs_points = self.get_absolute_points(internal_points)
+        coords = self.pts2coords(abs_points)
+        return coords
+    
+
+    def get_center_coords(self):
         points = self.get_absolute_points()
         p_x, p_y = points[0].xy
         for point in points[1:]:
@@ -698,7 +714,7 @@ class BlockBlock:
                 by base transform
         """
         if points is None:
-            points = self.points
+            points = self.get_points()
         if not isinstance(points, list):
             points = [points] 
         xtran = self.base_xtran()
@@ -757,6 +773,27 @@ class BlockBlock:
         """
         return self.get_rotation()
 
+    def get_perimeter_points(self):
+        """ Returns a set of internal points (relative to this block)
+        usable for determining inside/outside
+        """
+        return [Pt(0,0), Pt(0,1), Pt(1,1), Pt(1,0)]
+
+    def get_perimeter_abs_points(self):
+        """ Returns a set of coordinates (relative to this block)
+        usable for determining inside/outside
+        """
+        internal_points = self.get_perimeter_points()
+        abs_points = self.get_absolute_points(internal_points)
+        return abs_points
+
+    def get_perimeter_coords(self):
+        """ Returns a set of coordinates (relative to this block)
+        usable for determining inside/outside
+        """
+        abs_points = self.get_perimeter_abs_points()
+        coords = self.pts2coords(abs_points)
+        return coords
 
     def get_back_addon_position(self, new_type=None):
         """ Get point on which to place a new back "addon" block
@@ -851,7 +888,10 @@ class BlockBlock:
         top = self.get_top_container()
         if not hasattr(top, "cv_width"):
             raise SelectError("has no cv_width")
-        return top.cv_width
+        cv_width = top.cv_width
+        if cv_width is None:
+            cv_width = 1.
+        return cv_width
 
 
     def has_canvas(self):
@@ -864,13 +904,14 @@ class BlockBlock:
         return False
 
 
-    def is_at(self, x=None, y=None, level=0, max_level=10):
+    def is_at(self, x=None, y=None, level=0, max_level=10, margin=None):
         """ Check if point(x,y) is within the block or
             its components
         :x: canvas x coordinate
         :y: canvas y coordinate
         :level: recursion depth
         :max_level: maximum depth, in case we have recursive construction
+        :margin: margin +/- in x,y default: none ==> 0
         """
         level += 1
         if level > max_level:
@@ -881,10 +922,10 @@ class BlockBlock:
         
         if y is None:
             raise SelectError("is_at is missing a required parameter y")
-        
+            
         if self.ctype == BlockType.COMPOSITE:
             for comp in self.comps:
-                if comp.is_at(x=x, y=y, level=level+1):
+                if comp.is_at(x=x, y=y, level=level+1, margin=margin):
                     return True         # component is at x,y
             
             return False                # No component is at x,y
@@ -893,6 +934,11 @@ class BlockBlock:
         # rough guess treet as square
         # For now assume alligned with x and y axes
         min_x, min_y, max_x, max_y = self.min_max_xy()
+        if margin is not None:
+            min_x -= margin
+            min_y -= margin
+            max_x += margin
+            max_y += margin
         if (x >= min_x and x <= max_x
                 and y >= min_y and y <= max_y):
             return True
@@ -1106,6 +1152,7 @@ class BlockBlock:
         if self.ctype == BlockType.COMPOSITE:
             for comp in self.comps:
                 comp.display()
+                
         else:
             raise SelectError("Unsupported display for %s" % self)
 
@@ -1154,6 +1201,7 @@ class BlockBlock:
         from road_strait import RoadStrait
         from road_turn import RoadTurn
         from car_simple import CarSimple
+        from block_arrow import BlockArrow
         track = self.get_road_track()
         if new_type == RoadStrait:    # TFD
             new_block = RoadStrait(track,
@@ -1180,6 +1228,17 @@ class BlockBlock:
                                     rotation=self.rotation,
                                     base_color=base_color,
                                     origin="road_track", **kwargs)
+        elif new_type == BlockArrow:            # For direction adjustment selectors
+            if modifier == "left":
+                rot = self.rotation + 90.
+            elif modifier == "right":
+                rot = self.rotation - 90.
+            else:
+                rot = self.rotation
+            new_block = BlockArrow(track,
+                                    position=self.position,
+                                    rotation=rot,
+                                    **kwargs)
         else:
             raise SelectError("Unsupported type for new_type: %s" % new_type)
         return new_block
@@ -1207,6 +1266,7 @@ class BlockBlock:
         new_inst = type(self).__new__(self.__class__)  # skips calling __init__
         new_inst.canvas = self.canvas
         new_inst.container = self.container
+        new_inst.color = self.color
         new_inst.state = self.state               # Set by others
         new_inst.ctype = self.ctype
         new_inst.canvas_tags = {}           # tags if any displayed
@@ -1266,6 +1326,19 @@ class BlockBlock:
         scale = self.scale()
         rel_new_pos = Pt(position.x+delta_x/scale.x, position.y-delta_y/scale.y)
         self.position = rel_new_pos
+
+
+        
+
+    def get_points(self):
+        """ Internal points (perimeter)
+        :returns: list of internal points
+        """
+        if not hasattr(self, "points"):
+            points = [Pt(0,0), Pt(0,1), Pt(1,1), Pt(1,0)]       # Boundaries
+        else:
+            points = self.points
+        return points
 
 
     def get_position(self):

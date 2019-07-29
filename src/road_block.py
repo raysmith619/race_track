@@ -12,6 +12,7 @@ from select_trace import SlTrace
 from select_error import SelectError
 
 from block_block import BlockBlock, BlockType
+from block_text import BlockText
 
 class RoadType(Enum):
     COMPOSITE = 1
@@ -48,6 +49,7 @@ class RoadBlock(BlockBlock):
                 front_road=None,
                 back_road=None,
                 road_width_feet=45,
+                marked=False,
                 **kwargs):
         """ Setup Road object
         :container: Road object containing this object
@@ -64,8 +66,10 @@ class RoadBlock(BlockBlock):
         :edge_width: width of edge lines
         :front_road: road connected in front, if one default: None
         :back_road: road for which this is a front_road
+        :marked: Set true for tracking / debugging
         """
-        SlTrace.lg("\nRoadBlock: %s %s container: %s" % (road_type, self, container))    
+        SlTrace.lg("\nRoadBlock: %s %s container: %s" % (road_type, self, container))
+        self.marked = marked    
         self.road_type = road_type
         self.road_width = road_width 
         self.road_length = road_length
@@ -90,7 +94,8 @@ class RoadBlock(BlockBlock):
         new_inst.road_length = self.road_length
         new_inst.surface = self.surface
         new_inst.front_road = self.front_road       # shallow        
-        new_inst.back_road = self.back_road       # shallow        
+        new_inst.back_road = self.back_road       # shallow
+        new_inst.marked = self.marked               # ??? Should this be copied or reset?      
         return new_inst
         
         
@@ -114,8 +119,17 @@ class RoadBlock(BlockBlock):
         SlTrace.lg("display %s: %s" % (self.get_tag_list(), self), "display")
         for comp in self.comps:
             comp.display()
+        
         self.task_update()
 
+    def mark(self, color="red"):
+        self.marked = True
+        for comp in self.comps:
+            comp.xkwargs = {'fill' : 'pink'}
+        mark_text = BlockText(container=self, position=(Pt(-.5,-.5)), text="%d" % self.id)
+        self.comps.append(mark_text)
+        self.display()
+        
     def get_road_track(self):
         top = self.get_top_container()
         return top
@@ -160,30 +174,55 @@ class RoadBlock(BlockBlock):
         :returns: next road, None if none
         """
         if self.front_road is not None:
+            if SlTrace.trace("front_road"):
+                SlTrace.lg("%s direct link to %s " % (self, self.front_road))
             return self.front_road
         
         if not allow_close:
+            SlTrace.lg("%s don's check for close" % (self))
             return None         # Don't allow close checking
     
         race_track = self.get_race_track()
         if race_track is None:
             return None
         
-        add_pos_coords = self.abs_front_pos()
-        connected_roads = race_track.get_entry_at(*add_pos_coords, entry_type="road", all=True)
-        if len(connected_roads) < 2:
-            return None         # Need another close
-        
-        front_road = None
-        for rd in connected_roads:
-            if rd.id != self.id:
-                front_road = rd
-                if front_road.is_front_of(self):
-                    self.link_roads(front_road)
-                    return front_road
-                
-        return None                 # None close
-        
+        in_front_pt = self.get_relative_point(.5,1.1)    # In the middle a bit infromt
+        in_front_abs_pt = self.get_absolute_point(in_front_pt)
+        add_pos_coords = self.pts2coords(in_front_abs_pt)
+        if SlTrace.trace("front_road"):
+            SlTrace.lg("%s in_front_pt %s abs_pt:%s coords:%s" % (self, in_front_pt, in_front_abs_pt, add_pos_coords))
+        front_road = race_track.get_entry_at(*add_pos_coords,
+                                                   entry_type="road")
+        if front_road is None:
+            SlTrace.lg("get_front_road(%s) finds nothing in front at: %s" % (self, add_pos_coords))
+            SlTrace.lg(" % coords: %s " % (self, self.get_absolute_points()))
+            front_road2 = race_track.get_entry_at(*add_pos_coords,
+                                                   entry_type="road")
+            return front_road2
+        else:
+            if SlTrace.trace("front_road"):
+                SlTrace.lg("%s close to %s - linked" % (self, front_road))
+            if front_road.id == self.id:
+                SlTrace.lg("%s is 'close' to itself" % (self))
+                SlTrace.lg(" %s pts: %s %s " % (self, self.get_absolute_points(), self.get_coords()))
+                inside_pts = self.get_points()
+                for inside_pt in inside_pts:
+                    rel_pt = self.get_relative_point(inside_pt)         # In container's reference
+                    abs_pt = self.get_absolute_point(rel_pt)
+                    coords = self.pts2coords(abs_pt)
+                    SlTrace.lg("%s inside_pt %s rel_pt:%s abs_pt:%s coords:%s"
+                                % (self, inside_pt, rel_pt, abs_pt, coords))
+                    
+            self.link_roads(front_road) # link roads
+        return front_road
+    
+    
+    def get_modifier(self):
+        """ Get modifier for road
+        :returns: modifier string
+        """
+        return ""
+            
 
     def get_turn_speed(self):
         """ Get reduced speed for turns

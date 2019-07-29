@@ -154,6 +154,16 @@ class RoadTurn(RoadBlock):
             str_str += " state:%s" % self.state
         return str_str
 
+    def get_modifier(self):
+        """ Get modifier for road
+        :returns: modifier string
+        """
+        arc = self.get_arc()
+        if arc > 0:
+            return "left"
+        else:
+            return "right"
+
 
     def get_front_addon_rotation(self):
         """ Get rotation for a forward "addon" block

@@ -14,6 +14,7 @@ from road_track import RoadTrack
 from block_panel import BlockPanel
 from block_block import BlockBlock,BlockType,SelectInfo
 from block_polygon import BlockPolygon
+from block_arrow import BlockArrow
 from road_block import RoadBlock,SurfaceType
 from road_strait import RoadStrait
 from road_turn import RoadTurn
@@ -32,7 +33,118 @@ class SnapShot:
         self.cars = {}
         self.roads = {}
         self.selects_list = []    
+
+
+class TrackAdjustment:
+    """ Information to control track building adjustments
+    """
+    
+    def __init__(self, race_track, block, addition_blocks=[], shifting_blocks=[], undo_blocks=[]):
+        """ Setup selection blocks
+        :race_track: connection to race track for info and control
+        :block: block, arround which adjustments are made
+        :addition_blocks: list of blocks, one of which, if selected, adds the corresponding block to the track
+        :shifting_blocks: list of blocks, one of which, if selected, shifts all the selected blocks in the
+                            corresponding direction
+        :undo_blocks: list of blocks, one of which, if selected, undoes the previous command
+        """
+        self.race_track = race_track
+        self.block = block
+        self.addition_blocks = addition_blocks
+        self.shifting_blocks = shifting_blocks
+        self.undo_blocks = undo_blocks
+        self.show_track_adjustments(block)            # Display adjustments
+    
+    def ck_adjust(self, x=None, y=None):
+        """ Check if adjustment has been selected
+            and do adjustment if possible
+        :x,y: x-y track coordinates of mouse
+        :returns: True iff selected and adjustment has been made
+        """
+        for add_block in self.addition_blocks:
+            if add_block.is_at(x,y):
+                if self.track_adjust(add_block, "add"):
+                    return True
         
+        return False
+    
+    
+    def track_adjust(self, ck_block, operation="add"):
+        """ Adjust track, if possible
+        :ck_block:    Selected block
+        :operation: Operation to be performed e.g. "add", "shift", "delete", "undo"
+        """
+        if operation == "add":
+            self.remove_markers()
+            new_block = self.race_track.front_add_type(front_block=self.block,
+                                 new_type=type(ck_block), modifier=ck_block.get_modifier())
+            self.show_track_adjustments(new_block)    # show new adjustments
+            return True
+        
+        raise SelectError("Unrecognized track_adjust operation(%s)" % operation)
+        return False
+
+    def remove_markers(self):
+        """ Remove adjustment markers' blocks/display
+        """
+        for block in self.addition_blocks:
+            self.race_track.remove_entry(block)
+        self.addition_blocks = []    
+        for block in self.shifting_blocks:
+            self.race_track.remove_entry(block)
+        self.shifting_blocks = []    
+        for block in self.undo_blocks:
+            self.race_track.remove_entry(block)
+        self.undo_blocks = []
+        self.race_track.track_adjustment = None     # Hide
+
+    def show_track_adjustments(self, block): 
+        """ Display distinctly possible adjustment selections
+        set/reset race_track.track_adjustment
+        :block: around which the selections are placed - close to their possible placement
+        """
+        race_track = self.race_track
+        if race_track.track_adjustment is not None:
+            self.remove_markers()
+        self.block = block              # Make new focus
+        additions = []
+        xkwargs = {'fill' : 'red'}
+        height = block.get_length()*.5
+        ''' Trying arrows
+        if issubclass(type(block), RoadTurn):
+            height *= 2
+        road_strait = race_track.front_place_type(block, new_type=BlockArrow,
+                                        display=False, height=height, xkwargs=xkwargs)
+        road_strait.move_to(road_strait.get_relative_point(0,1.))
+        xkwargs = {'fill' : 'blue'}
+        road_left = race_track.front_place_type(block, new_type=BlockArrow, modifier="left", display=False, xkwargs=xkwargs)
+        road_left.move_to(road_left.get_relative_point(-.75,0))
+        xkwargs = {'fill' : 'green'}
+        road_right = race_track.front_place_type(block, new_type=BlockArrow, modifier="right", display=False, xkwargs=xkwargs)
+        road_right.move_to(road_left.get_relative_point(1.5,0))
+        '''
+        if issubclass(type(block), RoadTurn):
+            height *= 2
+        road_strait = race_track.front_place_type(block, new_type=RoadStrait,
+                                        display=False, height=height, xkwargs=xkwargs)
+        road_strait.move_to(road_strait.get_relative_point(0,1.))
+        xkwargs = {'fill' : 'blue'}
+        road_left = race_track.front_place_type(block, new_type=RoadTurn, modifier="left", display=False, xkwargs=xkwargs)
+        road_left.move_to(road_left.get_relative_point(-.75,0))
+        xkwargs = {'fill' : 'green'}
+        road_right = race_track.front_place_type(block, new_type=RoadTurn, modifier="right", display=False, xkwargs=xkwargs)
+        road_right.move_to(road_left.get_relative_point(1.5,0))
+        road_strait.display()
+        road_left.display()
+        road_right.display()
+        additions.append(road_strait)
+        additions.append(road_left)
+        additions.append(road_right)
+        self.addition_blocks = additions
+        race_track.track_adjustment = self      # Mark it so race track can see
+
+
+
 class RaceTrack(RoadTrack, BlockMouse):
     """
     Race track 
@@ -107,7 +219,7 @@ class RaceTrack(RoadTrack, BlockMouse):
                                background="lightgreen")
         self.set_reset()        # Set reset state - can be changed
         self.set_snap_stack = []
-
+        self.track_adjustment = None    # When set, control track adjustment by mouse positioning
         
     def add_to_road_bin(self, road):
         """ Add road to bin
@@ -183,19 +295,20 @@ class RaceTrack(RoadTrack, BlockMouse):
         return None
         
 
-    def get_entry_at(self, x=None, y=None, entry_type=None, all=False):
+    def get_entry_at(self, x=None, y=None, entry_type=None, all=False, margin=None):
         """ Return road at canvas coordinates
         :x: x canvas coordinate
         :y: y canvas coordinate
         :entry_type: "car", "road" default: any types
         :all: if True return list of all roads which contain this coordinate
               if False just first block found which contains this coordinate
+        :margin: += x,y pixels default: None
         """
         road_track = self.get_road_track()
         if road_track is None:
             return None             # No track yet
         
-        return road_track.get_entry_at(x=x, y=y, entry_type=entry_type, all=all)
+        return road_track.get_entry_at(x=x, y=y, entry_type=entry_type, all=all, margin=margin)
     
     
 
@@ -321,81 +434,123 @@ class RaceTrack(RoadTrack, BlockMouse):
         self.ctrl_down = False
         self.alt_down = False
         self.shift_down = False
+
+
+    def mouse_down(self, event):
+        mouse_info = self.get_info(event=event)
+        x,y = mouse_info.x_coord, mouse_info.y_coord
+        self.snap_shot()
+        if self.is_in_track(x,y):
+            return self.mouse_down_track(event)
         
+        if self.is_in_car_bin(x,y):
+            return self.mouse_down_car_bin(event)
         
-    def mouse_down (self, event):
+        if self.is_in_road_bin(x,y):
+            return self.mouse_down_road_bin(event)
+        
+        if SlTrace.trace("mouse_click"):
+            SlTrace.lg("Clicked OUTSIDE at x=%d y=%d shift_down=%s" % (x,y, self.is_shift_down()))
+        return True
+    
+    
+        
+    def mouse_down_track(self, event):
         mouse_info = self.get_info(event=event)
         x,y = mouse_info.x_coord, mouse_info.y_coord
         if SlTrace.trace("mouse_click"):
             SlTrace.lg("Clicked at x=%d y=%d shift_down=%s" % (x,y, self.is_shift_down()))
-        if self.is_in_track(x,y):
-            self.snap_shot()
-            if self.is_shift_down():                # Shift is grouping control
-                block = self.get_entry_at(x,y)
-                if block is not None:
-                    if block.is_selected():
-                        self.clear_selected(block.id)
-                    else:
-                        self.set_selected(block.id, x_coord=x,
-                                           y_coord=y,keep_old=True)
-                    return
-                else:
-                    SlTrace.lg("No entry found at x=%d  y=%d" % (x,y))
-                return
-            
-            if self.is_bin_selected():              # Check if adding a car
-                bin_block = self.bin_selection
-                track_block = self.get_entry_at(x,y)
-                if issubclass(type(bin_block), CarBlock) and issubclass(type(track_block), RoadBlock):
-                    dist = 0
-                    if issubclass(type(track_block), RoadTurn):
-                        dist = .5*track_block.get_length_dist()   # Place in middle
-                    self.add_to_track(bin_block,x=x, y=y, rotation=track_block.get_rotation_at(dist=dist))
-                    return
-            
-            block = self.get_entry_at(x,y)        # If inside a car/road, select it/leave it selected
+        if self.is_shift_down():                # Shift is grouping control
+            block = self.get_entry_at(x,y)
             if block is not None:
-                self.set_selected(block)
+                if block.is_selected():
+                    self.clear_selected(block.id)
+                else:
+                    self.set_selected(block.id, x_coord=x,
+                                       y_coord=y,keep_old=True)
                 return
-            
-            if self.is_bin_selected():              # If not in an entry, check to see if we should add a new one here
-                block = self.bin_selection
-                self.add_to_track(block,x=x, y=y)
-                return
-            
-            self.clear_selected()       # Clear all
-            return                  # End of in track operation
+            else:
+                SlTrace.lg("No entry found at x=%d  y=%d" % (x,y))
+            return
         
-        if self.is_in_road_bin(x,y):    
-            SlTrace.lg("In road bin")
-            mouse_block = self.get_event_block(types=(RoadStrait,RoadTurn))
-            if mouse_block is not None:
-                SlTrace.lg("Clicked block[%s]:%s at x=%d y=%d" % (mouse_block.get_tag_list(), mouse_block, x,y))
-                self.save_bin_selection(mouse_block)
-                self.set_selected(mouse_block.id)
+        if self.track_adjustment is not None:   # Check if adjusting track
+            if self.track_adjustment.ck_adjust(x,y):
                 return
-            
+                
+        if self.is_bin_selected():              # Check if adding a car
+            bin_block = self.bin_selection
+            track_block = self.get_entry_at(x,y)
+            if issubclass(type(bin_block), CarBlock) and issubclass(type(track_block), RoadBlock):
+                dist = 0
+                if issubclass(type(track_block), RoadTurn):
+                    dist = .5*track_block.get_length_dist()   # Place in middle
+                self.add_to_track(bin_block,x=x, y=y, rotation=track_block.get_rotation_at(dist=dist))
+                return
+
+                
+        block = self.get_entry_at(x,y)        # If inside a car/road, select it/leave it selected
+        if block is not None:
+            self.set_selected(block)
+            return
+        
+        if self.is_bin_selected():              # If not in an entry, check to see if we should add a new one here
+            block = self.bin_selection
+            if issubclass(type(bin_block), RoadBlock):
+                self.clear_selected()       # Clear all
+            self.add_to_track(block,x=x, y=y)
             self.clear_bin_selection()
             return
         
-        if self.is_in_car_bin(x,y):    
-            SlTrace.lg("In car bin")
-            mouse_block = self.get_event_block(types=(CarSimple))
-            if mouse_block is not None:
-                SlTrace.lg("Clicked block[%s]:%s at x=%d y=%d" % (mouse_block.get_tag_list(), mouse_block, x,y))
-                self.save_bin_selection(mouse_block)
-                self.set_selected(mouse_block.id)
-                return
-            
-            self.clear_bin_selection()
-            return
+        self.clear_selected()       # Clear all
+        return                  # End of in track operation
+ 
+ 
+    def mouse_down_car_bin(self, event):    
+        """ Mouse event in car bin
+        :event: mouse event
+        :returns: True iff successful
+        """        
+        mouse_info = self.get_info(event=event)
+        x,y = mouse_info.x_coord, mouse_info.y_coord
+        if SlTrace.trace("mouse_click"):
+            SlTrace.lg("Clicked car_bin at x=%d y=%d shift_down=%s" % (x,y, self.is_shift_down()))
+        mouse_block = self.get_event_block(types=(CarSimple))
+        if mouse_block is not None:
+            SlTrace.lg("Clicked block[%s]:%s at x=%d y=%d" % (mouse_block.get_tag_list(), mouse_block, x,y))
+            self.save_bin_selection(mouse_block)
+            self.set_selected(mouse_block.id)
+            return True
+        
+        self.clear_bin_selection()
+        return True
+
+
+    def mouse_down_road_bin(self,event):
+        """ Mouse event in road bin
+        :event: mouse event
+        :returns: True iff successful
+        """        
+        mouse_info = self.get_info(event=event)
+        x,y = mouse_info.x_coord, mouse_info.y_coord
+        if SlTrace.trace("mouse_click"):
+            SlTrace.lg("Clicked road_bin at x=%d y=%d shift_down=%s" % (x,y, self.is_shift_down()))
+        mouse_block = self.get_event_block(types=(RoadStrait,RoadTurn))
+        if mouse_block is not None:
+            SlTrace.lg("Clicked block[%s]:%s at x=%d y=%d" % (mouse_block.get_tag_list(), mouse_block, x,y))
+            self.save_bin_selection(mouse_block)
+            self.set_selected(mouse_block.id)
+            return True
+        
+        self.clear_bin_selection()
+        return True
         
 
     def clear_bin_selection(self):
         """ clear selection 
         """
-        if self.bin_selected and self.bin_selection is not None:
+        if self.bin_selection is not None:
             self.clear_selected(self.bin_selection.id)
+            self.bin_selection = None
         self.bin_selected = False
         
 
@@ -475,73 +630,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         selected.x_coord_prev = prev_x
         selected.y = y 
         selected.y_coord_prev = prev_y 
-           
-
-
-    def mouse_down_motion_car_bin(self, mouse_info=None, mouse_block=None):
-        x,y = mouse_info.x_coord, mouse_info.y_coord
-        SlTrace.lg("\nmotion_car_bin: %s at xy(%d,%d)" % (mouse_block, x,y))
-        if mouse_block.state == "selected":
-            selected = self.get_selected(mouse_block)
-            if selected is not None:
-                SlTrace.lg("mouse_block %s is selected" % mouse_block)
-            else:
-                SlTrace.lg("mouse_block %s is not selected - IGNORED\n" % mouse_block)
-                return
-            
-            '''new_block = mouse_block.dup()# Hack because we don't move the block
-            new_block.state = "new"
-            delta_x = x - selected.x_coord_prev 
-            delta_y = y - selected.y_coord_prev
-            new_selected = self.set_selected(new_block.id, x_coord=x, y_coord=y)
-            new_block.drag_block(delta_x=delta_x, delta_y=delta_y, canvas_coord=True)
-            ###new_block.display()
-            SlTrace.lg("new_block(%s)[%s] dragged to x,y=%d,%d" %
-                        (new_block, new_block.get_tag_list(), x, y))
-            new_selected.x_coord_prev = x 
-            new_selected.y_coord_prev = y
-            mouse_block.state = "old"
-            ###self.clear_selected(mouse_block)
-            new_block.display()
-            '''
-            mouse_block.state = "new"
-            mouse_block.display()
-           
-            return
-            
-        elif mouse_block.state == "new":
-            SlTrace.lg("mouse_block %s now new state" % mouse_block)
-            selected = self.get_selected(mouse_block)
-            SlTrace.lg("is still selected") 
-            if selected is None:
-                SlTrace.lg("mouse_down_motion_car_bin %s not selected" % mouse_block)
-                return
-        
-            mouse_info = self.get_mouse_info()
-            SlTrace.lg("%s selected(%s) to x,y=%d,%d" % (mouse_block, selected.block, x, y))
-       
-            if selected.x_coord_prev is None:
-                SlTrace.lg("%s None x_coord_prev selected(%s) to x,y=%d,%d" % (mouse_block, selected.block, x, y))
-                return
-            
-            block = selected.block       
-            delta_x = x - mouse_info.x_coord_prev 
-            delta_y = y - mouse_info.y_coord_prev
-            ###block.drag_block(delta_x=delta_x, delta_y=delta_y, canvas_coord=True)
-            ###SlTrace.lg("Dragged %s[%s] delta_xy=(%d,%d) new_xy=(%d,%d)" %
-            ###            (block, block.get_tag_list(), delta_x,delta_y, x,y), "dragged")
-            ###block.state = "moved"
-            ###self.set_selected(block.id, x_coord=x, y_coord=y)
-            ###block.display()
-            ###SlTrace.lg("selected new in road_bin")
-            ###selected.x_coord_prev = x 
-            ###selected.y_coord_prev = y 
-            ###block.display()
-            # HACK - transform (for now just create new) into entry on track
-            self.move_to_track(block, bin_x=x, bin_y=y)
-            mouse_info.x_coord
-        else:
-            SlTrace.lg("mouse_down_motion_car_bin unrecognize state: %s" % mouse_block)
 
 
     def mouse3_down(self, event=None):
@@ -634,9 +722,8 @@ class RaceTrack(RoadTrack, BlockMouse):
             self.set_selected(new_block.id, keep_old=True)
         if display:
             new_block.display()
-        if issubclass(type(block), RoadBlock):
-            add_on_selects = self.show_add_on_selects(new_block)
-            self.add_on_selects = add_on_selects
+        if select and issubclass(type(block), RoadBlock):
+            self.show_track_adjustments(new_block)
         return new_block        
 
     def move_to_track(self, block, bin_x=None, bin_y=None):
@@ -798,9 +885,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         elif change == "back_add_right_turn":
             self.back_add_type(RoadTurn, "right")
         elif change == "select_none":
-            for block in selected_blocks:
-                self.clear_selected(block.id)
-                block.display()
+            self.select_none()
         elif change == "select_all":
             for road in self.road_track.roads.values():
                 road_id = road.id
@@ -825,6 +910,13 @@ class RaceTrack(RoadTrack, BlockMouse):
             return False        # Unsuccessful
 
         return True                 # Successful
+
+
+    def select_none(self):
+        selected_blocks = self.get_selected_blocks()
+        for block in selected_blocks:
+            self.clear_selected(block.id)
+            block.display()
 
     def set_reset(self):
         """ Set current state as "reset" state - to be
@@ -939,36 +1031,24 @@ class RaceTrack(RoadTrack, BlockMouse):
         new_block.display()
         
     
-    def front_add_type(self, new_type=None, modifier=None):
+    def front_add_type(self, front_block=None, new_type=None, modifier=None):
         """ Add road to front end(top end of most recently selected)
             TBD: Possibly changed to determine end of physically connected string
             Supports Road types, Car types
+            :front_block: block(road) to which we add, default: most recently selected
+            :new_type: type of addition e.g. RoadTurn
+            :modifier: e.g "left", "right"
             :returns: created object
         """
-        sel_list = self.get_selected_blocks()
-        if not sel_list:
-            return      # None selected
         
+        if front_block is None:
+            sel_list = self.get_selected_blocks()
+            if not sel_list:
+                return      # None selected
+            front_block = sel_list[-1]
+                
         SlTrace.lg("\nfront_add_type: new_type:%s modifier:%s" %
                    (new_type, modifier), "add_block")
-        front_block = sel_list[-1]
-        '''
-        SlTrace.lg("front_add_type: front_block:%s" % front_block, "add_block")
-        SlTrace.lg("front_add_type: points:%s" % front_block.get_absolute_points(), "add_block")
-        add_pos = front_block.get_front_addon_position()
-        add_rot = front_block.get_front_addon_rotation()
-        if SlTrace.trace("add_block"):
-            abs_pos = self.get_absolute_point(add_pos)
-            SlTrace.lg("front_add_type: front rot:%.0f pos:%s(%s) rot:%.0f" %
-                        (front_block.rotation, add_pos, abs_pos, add_rot))
-        new_block = front_block.new_type(new_type, modifier)
-        if add_rot != new_block.get_rotation():
-            new_block.set_rotation(add_rot)   # Small optimization
-        self.add_entry(new_block)
-        SlTrace.lg("front_add_type: new_block:%s" % new_block, "add_block")
-        SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
-        new_block.move_to(position=add_pos)
-        '''
         new_block = self.front_place_type(front_block, new_type=new_type, modifier=modifier)
         if front_block.origin == "road_track" and issubclass(type(new_block), CarBlock):
             front_block.link_roads(new_block)
@@ -979,40 +1059,31 @@ class RaceTrack(RoadTrack, BlockMouse):
         new_block.display()
         return new_block
 
-
-    def show_add_on_selects(self, block): 
-        """ Display distinctly possible add on selections
-        :block: around which the selections are placed - close to their possible placement
-        :returns: list of selection blocks
+    def clear_track_adjustments(self):
+        """ Clear track building adjustments
         """
-        selects = []
-        xkwargs = {'fill' : 'red'}
-        road_strait = self.front_place_type(block, new_type=RoadStrait, display=False, xkwargs=xkwargs)
-        xkwargs = {'fill' : 'blue'}
-        road_left = self.front_place_type(block, new_type=RoadTurn, modifier="left", display=False, xkwargs=xkwargs)
-        road_left.move_to(road_left.get_relative_point(-.75,0))
-        xkwargs = {'fill' : 'green'}
-        road_right = self.front_place_type(block, new_type=RoadTurn, modifier="right", display=False, xkwargs=xkwargs)
-        road_right.move_to(road_left.get_relative_point(1.5,0))
-        road_strait.display()
-        road_left.display()
-        road_right.display()
-        selects.append(road_strait)
-        selects.append(road_left)
-        selects.append(road_right)
-        return selects
+        if self.track_adjustment is not None:
+            self.track_adjustment.remove_markers()
+
+    def show_track_adjustments(self, block): 
+        """ Setup and Display distinctly possible adjustment selections
+        :block: around which the selections are placed - close to their possible placement
+        """
+        TrackAdjustment(self, block)        # Setup self.track_adjustment
+            
     
-    def front_place_type(self, front_block, new_type=None, modifier=None, display=False, xkwargs=None):
+    def front_place_type(self, front_block, new_type=None, modifier=None, display=False, xkwargs=None, **kwargs):
         """ Add road to front end(top end of most recently selected)
             TBD: Possibly changed to determine end of physically connected string
             Supports Road types, Car types
             :display: true => display
+            :kwargs: args passed to object construction
             :returns: created object
         """
         
         add_pos = front_block.get_front_addon_position()
         add_rot = front_block.get_front_addon_rotation()
-        new_block = front_block.new_type(new_type, modifier, xkwargs=xkwargs)
+        new_block = front_block.new_type(new_type, modifier=modifier, xkwargs=xkwargs, **kwargs)
         if add_pos != new_block.get_position():
             new_block.set_position(add_pos)   # Small optimization
         if add_rot != new_block.get_rotation():
@@ -1070,6 +1141,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         Car must be on a track to race
 
        """
+        self.clear_track_adjustments()
+        
         self.races = []         # Filled with races, one per entry
         races_by_car_id = {}    # To keep track of cars which have been placed
         races_by_road_id = {}   # To keep track of roads which have been placed
@@ -1082,8 +1155,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         for car in cars:
             road = self.get_car_road(car)
             if road is None:
-                SlTrace.lg("car %s is not on road - please place in road or remove car" % car)
-                return False
+                SlTrace.lg("car %s is not on road - ignored - please place in road or remove car" % car)
+                continue
             
             if road.id in races_by_road_id:
                 race = races_by_road_id[road.id]
@@ -1128,13 +1201,21 @@ class RaceTrack(RoadTrack, BlockMouse):
         road = first_road
         road_list = []      # start list with this road
         while road is not None:
+            if SlTrace.trace("front_road"):
+                SlTrace.lg("get_road_list: appending %s" % road)
             road_list.append(road)
-            road = road.get_front_road()    
-            if road is None:
+            road_next = road.get_front_road()    
+            if road_next is None:
+                if SlTrace.trace("front_road"):
+                    SlTrace.lg("get_road_list: no more in chain")
                 break               # No more in front ==> End of list
             
-            if road.id == first_road.id:
-                break       # Connected to first ==> End of list
+            if road_next.id == first_road.id:
+                if SlTrace.trace("front_road"):
+                    SlTrace.lg("get_road_list: next %s is first_road in list" % (road_next))
+                break           # Connected to first ==> End of list
+            
+            road = road_next
         return road_list
 
             
@@ -1145,6 +1226,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         :returns: True if valid race_circuit Note: the end may not be linked to the start
         """
         if len(road_list) < 2:
+            SlTrace.lg("circuit length(%d) < 2" % len(road_list))
             return False            # One or none
         
         first_road = road_list[0]
@@ -1157,7 +1239,11 @@ class RaceTrack(RoadTrack, BlockMouse):
                 break
             if next_road.id == first_road.id:
                 return True         # Already linked
-            
+        
+        SlTrace.lg("Not a race circuit:")
+        for road in road_list:
+            SlTrace.lg("%s front_road: %s back_road: %s" % (road, road.get_front_road(), road.back_road))
+            road.mark()    
         return False
         
     def get_road_width_feet(self):

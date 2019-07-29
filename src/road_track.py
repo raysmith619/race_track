@@ -161,7 +161,7 @@ class RoadTrack(BlockPanel):
         return None
         
 
-    def get_entry_at(self, x=None, y=None, entry_type=None, all=False):
+    def get_entry_at(self, x=None, y=None, entry_type=None, all=False, margin=None):
         """ Return car/road at canvas coordinates
         :x: x canvas coordinate
         :y: y canvas coordinate
@@ -169,20 +169,21 @@ class RoadTrack(BlockPanel):
                 default: all types
         :all: if True return list of all entries which contain this coordinate
               if False just first block found which contains this coordinate
+        :margin: +=margin in x,y Looing for x-margin to x+margin, y same
         :returns: if all - returns list of all entries found
                     else - returns entry found, else None
         """
         entries_found = []
         if entry_type is None or entry_type == "car":
             for entry in self.cars.values():
-                if entry.is_at(x=x, y=y):
+                if entry.is_at(x=x, y=y, margin=margin):
                     entries_found.append(entry)
                     if not all:
                         break
         if all or len(entries_found) == 0:
             if entry_type is None or entry_type == "road":
                 for entry in self.roads.values():
-                    if entry.is_at(x=x, y=y):
+                    if entry.is_at(x=x, y=y, margin=margin):
                         entries_found.append(entry)
                         if not all:
                             break
