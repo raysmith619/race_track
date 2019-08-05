@@ -153,7 +153,7 @@ class CarBlock(BlockBlock):
         return self.get_road_track().get_turn_speed()
 
 
-    def get_acc_speed(self, delta_time):
+    def get_acc_speed(self, delta_time=1.):
         """ Max acceleration per second for car
         in mph/sec e.g. 0 to 60 in 4 seconds == 15 gross approximation!
         """

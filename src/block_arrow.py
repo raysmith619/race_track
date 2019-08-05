@@ -82,56 +82,7 @@ class BlockArrow(BlockPolygon):
 if __name__ == "__main__":
     from tkinter import *
     
-    def test1():
-        from block_block import BlockBlock
-        from block_text import BlockText
-        
-        width = 600
-        height = 600        
-        frame = Frame(width=width, height=height, bg="", colormap="new")
-        frame.pack()
-        canvas = Canvas(frame, width=width, height=height)
-        canvas.pack()
-        position = Pt(.5,.5)
-        rotation = None
-        th_width = 1.
-        th_height = 1.   
-        bP = BlockBlock(canvas=canvas)
-        bP = BlockBlock(canvas=canvas, width=th_width, height=th_height,
-               position=position,
-               cv_width=width, cv_height=height,
-               rotation=rotation)
-        bP.display()
-    
-        text_pos = Pt(.5,.5)
-        text_pi_x = 0
-        text_pi_y = -.1
-        text_box = BlockText(container=bP, text="text here:%s" % text_pos, position=text_pos)
-        bP.comps.append(text_box)
-        bP.display()
-        
-        mainloop()
-    
-    
-    def test2():    
-        width = 600
-        height = 600        
-        frame = Frame(width=width, height=height, bg="", colormap="new")
-        frame.pack()
-        canvas = Canvas(frame, width=width, height=height)
-        canvas.pack()   
-        bP = BlockBlock(canvas=canvas)
-    
-        box_pos = Pt(.5,.5)
-        box_rot = None
-        box = BlockArrow(container=bP, position=box_pos, rotation=box_rot)
-    
-        box.display()
-        
-        mainloop()
-    
-    
-    def test3():    
+    def test1():    
         from block_block import BlockBlock
         from block_text import BlockText
         
@@ -166,4 +117,4 @@ if __name__ == "__main__":
             
         mainloop()
 
-    test3()
+    test1()

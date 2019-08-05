@@ -71,6 +71,16 @@ class BlockPanel(BlockBlock):
             return self.entries[idx]
         
         return None         # None here
+
+
+    def get_cv_width(self):
+        return self.cv_width
+    
+    def get_cv_length(self):
+        return self.cv_height
+
+    def get_canvas(self):
+        return self.canvas
     
         
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ import sys, traceback
 from select_trace import SlTrace
 from select_error import SelectError
 
+
 class BlockType(Enum):
     COMPOSITE = 1
     POLYGON = 2
@@ -92,12 +93,46 @@ class BlockBlock:
     When a BlockBlock moves/rotates The components move/rotate accordingly
     """
     id = 0
+    canvas = None           # Builtin canvas reference
     tagged_blocks = {}      # Displayed blocks, by canvas tag
     id_blocks = {}          # Blocks by block id
     selects = {}            # ids of selected blocks
     selects_list = []       # SelectInfo blocks in order of selection
                             # Adjusted by set_selected, clear_selected
+    aux_canvas_tags = {}    # Extra tags for debugging, etc
 
+
+    @classmethod
+    def set_canvas(cls, canvas):
+        """ Setup for base methods
+        :canvas: canvas object
+        """
+        cls.canvas = canvas
+        
+    @classmethod
+    def cls_get_canvas(cls):
+        if cls.canvas is None:
+            raise SelectError("No canvas set")
+        
+        return cls.canvas
+
+
+    @classmethod
+    def mkpoint(cls, x,y, color="red", rad=5):
+        """ Make a marker
+        :color: marker color default: red
+        :rad:  radius of point default: radius (pixels)
+        :returns: tag created
+        """
+        canvas = cls.cls_get_canvas()
+        x0 = x-rad
+        y0 = y-rad
+        x1 = x+rad
+        y1 = y+rad
+        tag = canvas.create_oval(x0,y0,x1,y1, fill=color)
+        cls.aux_canvas_tags[tag] = tag
+        return tag
+    
     @classmethod
     def new_id(cls):
         BlockBlock.id += 1
@@ -474,7 +509,7 @@ class BlockBlock:
         if container is None:               # Top of heap ?
             if width is not None:               # Any scaling
                 width *= self.get_cv_width()          # Scale width to canvas
-                height *= self.get_cv_height()            
+                height *= self.get_cv_length()            
                         
         self.position = position
         self.width = width
@@ -517,6 +552,29 @@ class BlockBlock:
         while comp.container is not None:
             top = comp = comp.container
         return top
+
+        
+    def get_infront_coords(self):
+        """ Adhock "infront point"
+        
+        :return coordinates (within candidate block)
+        simulate Pt(.5, 1+fraction) which doesn't seem to work
+        """
+        fraction = .2                   # Ammount in front as a fraction of our height
+        ppcs = self.get_perimeter_coords()
+        x0,y0 = ppcs[0], ppcs[1]        # 0,0 lower left corner (box coordinates(0,0))
+        x1, y1 = ppcs[2], ppcs[3]       # 1,0 Upper left corner (box coordinates)
+        x2, y2 = ppcs[4], ppcs[5]       # 1,1 Upper right corner
+        x3, y3 = ppcs[6], ppcs[7]       # 1,0 Lower right corner
+        middle_top_coords = [(x1+x2)/2., (y1+y2)/2.]
+        middle_bottom_coords = [(x0+x3)/2., (y0+y3)/2.]
+        SlTrace.lg("middle_top: %s middle_bottom: %s" % (middle_top_coords, middle_bottom_coords))
+        bottom_to_top = [middle_top_coords[0]-middle_bottom_coords[0],
+                          middle_top_coords[1]-middle_bottom_coords[1]]
+        bottom_to_top_fract = [bottom_to_top[0]*fraction, bottom_to_top[1]*fraction]
+        infront_coords = [middle_top_coords[0]+bottom_to_top_fract[0],
+                               middle_top_coords[1]+bottom_to_top_fract[1]]
+        return infront_coords
 
 
     def get_position_coords(self):
@@ -637,7 +695,52 @@ class BlockBlock:
         pt = Pt(p_x, p_y)
         coords = self.pts2coords(pt)
         return coords
-    
+
+    ''' Replaced, temporaily, with the HACK below
+    until I can figure how to do it right (get_inverse_points does not work)
+
+    def get_internal_points(self, coords):
+        """ Get internal points (x=>1, y=>1) given external coordinates
+        :coords:  canvas coordinates
+        :returns: internal points
+        """
+        pts = self.coords2pts(coords)
+        points = self.get_inverse_points(points=pts)
+        return points
+    '''
+
+    def get_internal_points(self, coords):
+        """ A HACK to get around problem with get_inverse_points
+        """
+        """ Get internal points (x=>1, y=>1) given external coordinates
+        :coords:  canvas coordinates
+        :returns: internal points
+        """
+        internal_pts = self.get_perimeter_points()
+        abs_pts = self.get_absolute_points(internal_pts)
+        up_vect = abs_pts[1] - abs_pts[0]
+        up_dist = sqrt(up_vect.x**2 + up_vect.y**2)
+        right_vect = abs_pts[3] - abs_pts[0]
+        right_dist = sqrt(right_vect.x**2 + right_vect.y**2)
+        int_points = []
+        for ic in range(0, len(coords), 2):
+            pt = self.coords2pts(coords[ic:ic+2])[0]
+            pt_vect = pt - abs_pts[0]
+            x = dot([pt_vect.x, pt_vect.y], [right_vect.x,right_vect.y])/right_dist**2
+            y = dot([pt_vect.x,pt_vect.y], [up_vect.x,up_vect.y])/up_dist**2
+            int_pt = Pt(x,y)
+            int_points.append(int_pt)
+        return int_points
+
+
+    def get_internal_point(self, coords=None):
+        """ get internal point from coord
+        :coords: x,y pair
+        :returns: internal point
+        """
+        pts = self.get_internal_points(coords=coords)
+        return pts[0]
+        
     
     def get_inverse_points(self, points=None):
         """ Get points relative to container's coordinate system
@@ -814,11 +917,12 @@ class BlockBlock:
         return add_pt
 
 
-    def get_front_addon_position(self):
+    def get_front_addon_position(self, nlengths=1):
         """ Get point on which to place a forward "addon" block
+        :nlengths: number of lengths forward default:1
         :returns: point (Pt) in containers reference 
         """
-        internal_pt = Pt(0,1)
+        internal_pt = Pt(0,1*nlengths)
         rot = self.get_rotation()   # TFD to see what happens
         if rot != 0 and rot != 180:
             internal_pt = Pt(0,1*2)  
@@ -880,6 +984,12 @@ class BlockBlock:
         if cv_height is None:
             cv_height = 600
         return cv_height
+ 
+ 
+    def get_cv_length(self):
+        """ same as get_cv_height
+        """
+        return self.get_cv_height()
     
     
     def get_cv_width(self):
@@ -1131,8 +1241,10 @@ class BlockBlock:
         for tg in list(self.canvas_tags.keys()):
             SlTrace.lg("delete tag(%s) in %s" % (tg, self), "display")
             canvas.delete(tg)
-            del BlockBlock.tagged_blocks[tg]
-            del self.canvas_tags[tg]
+            if tg in BlockBlock.tagged_blocks:
+                del BlockBlock.tagged_blocks[tg]
+            if tg in self.canvas_tags:
+                del self.canvas_tags[tg]
         if do_comps and hasattr(self, "comps"):
             for comp in self.comps:
                 comp.remove_display_objects(do_comps=True)
@@ -1209,6 +1321,7 @@ class BlockBlock:
                                     rotation=self.rotation,
                                     origin="road_track", **kwargs)
         elif new_type == RoadTurn:
+            arc = 0.
             if modifier == "left":
                 arc = 90.
             elif modifier == "right":
@@ -1590,23 +1703,30 @@ class BlockBlock:
         """ Add block_type to front end of block (e.g. road)
         in a way to facilitate road building
             TBD: Possibly changed to determine end of physically connected string
+        :new_type: block type to be added
+        :modifier:  e.g. "left", "right", ""
         """
-        SlTrace.lg("\nfront_add_type:", "add_block")
-        SlTrace.lg("front_add_type: front_block:%s" % self, "add_block")
-        SlTrace.lg("front_add_type: points:%s" % self.get_absolute_points(), "add_block")
+        SlTrace.lg("\nblock_block:front_add_type:", "add_block")
+        SlTrace.lg("block_block:front_add_type: front_block:%s" % self, "add_block")
+        SlTrace.lg("block_block:front_add_type: points:%s" % self.get_absolute_points(), "add_block")
         add_pos1 = self.get_front_addon_position()
         add_pos = self.get_front_addon_position()
         add_rot = self.get_front_addon_rotation()
         if SlTrace.trace("add_block"):
             abs_pos = self.container.get_absolute_point(add_pos)
-            SlTrace.lg("front_add_type: pos:%s(%s) rot:%.0f" % (add_pos, abs_pos, add_rot))
+            SlTrace.lg("block_block:front_add_type: pos:%s(%s) rot:%.0f" % (add_pos, abs_pos, add_rot))
         new_block = self.new_type(new_type, modifier)
         if add_rot != new_block.get_rotation():
             new_block.set_rotation(add_rot)   # Small optimization
-        SlTrace.lg("front_add_type: new_block:%s" % new_block, "add_block")
-        SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
+        SlTrace.lg("block_block:front_add_type: new_block:%s" % new_block, "add_block")
+        SlTrace.lg("block_block:front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
         new_block.move_to(position=add_pos)
-        SlTrace.lg("front_add_type: moved new_block:%s" % new_block, "add_block")
-        SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
+        SlTrace.lg("block_block:front_add_type: moved new_block:%s" % new_block, "add_block")
+        SlTrace.lg("block_block:front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
         ###self.set_selected(new_block, keep_old=True)
         return new_block
+
+    
+def mkpoint(x,y, color="red", rad=5):
+    return BlockBlock.mkpoint(x,y, color=color, rad=rad)
+

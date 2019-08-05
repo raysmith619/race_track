@@ -158,12 +158,6 @@ class PositionWindow(SelectControlWindow):
     def back_add_right_turn(self):
         self.change_control("back_add_right_turn")
     
-    def front_add_red_car(self):
-        self.change_control("front_add_red_car")
-    
-    def front_add_blue_car(self):
-        self.change_control("front_add_blue_car")
-    
     def delete_front(self):
         self.change_control("delete_front")
     

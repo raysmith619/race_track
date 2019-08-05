@@ -104,7 +104,8 @@ app = BlockWindow(master=mw,
 frame = Frame(app, width=width, height=height, bg="", colormap="new")
 frame.pack()
 canvas = Canvas(frame, width=width, height=height)
-canvas.pack()   
+canvas.pack()
+BlockBlock.set_canvas(canvas)           # Set for auxiliary routines, e.g., mkpoint
 th_width = 1.
 th_height = 1.
 position = None

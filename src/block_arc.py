@@ -61,6 +61,8 @@ class BlockArc(BlockBlock):
         width = self.width
         height = self.height
         if radius is None:
+            if width is None:
+                width = 1.
             radius = width/2.
         self.radius = radius
 
@@ -132,6 +134,8 @@ class BlockArc(BlockBlock):
             SlTrace.lg("create_polygon:%s, kwargs=%s" % (coords, self.xkwargs), "arc_coords")
         if self.xkwargs is None:
             self.xkwargs = {}
+        if self.color is not None:
+            self.xkwargs['fill'] = self.color
         if self.is_selected():
             self.xkwargs['outline'] = "red"
             self.xkwargs['width'] = 3

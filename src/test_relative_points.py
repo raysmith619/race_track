@@ -11,7 +11,7 @@ from tkinter import *
 from select_trace import SlTrace
 from select_error import SelectError
 
-from block_block import BlockBlock
+from block_block import BlockBlock,mkpoint
 from block_text import BlockText
 from block_arrow import BlockArrow
 
@@ -20,6 +20,7 @@ height = 600
 frame = Frame(width=width, height=height, bg="", colormap="new")
 frame.pack()
 canvas = Canvas(frame, width=width, height=height)
+BlockBlock.set_canvas(canvas)
 canvas.pack()
 position = Pt(.5,.5)
 rotation = None
@@ -36,29 +37,6 @@ box_height = .14
 box_width = box_height
 colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"]
 ang_inc = 45
-def mkpoint(x,y, rad=5, color="red"):
-    """
-    :rad:  radius of point
-    """
-    x0 = x-rad
-    y0 = y-rad
-    x1 = x+rad
-    y1 = y+rad
-    canvas.create_oval(x0,y0,x1,y1, fill=color)
-    
-def infront_coords(box):
-    """ Adhock "infront point"
-    
-    :return coordinates (within candidate block)
-    simulate Pt(.5, 1.1) which doesn't seem to work
-    """
-    pps = box.get_perimeter_abs_points()
-    top_middle_pt = Pt((pps[1].x + pps[2].x)/2., (pps[1].y + pps[2].y)/2.)
-    SlTrace.lg("top_middle_pt: %s" % top_middle_pt)
-    infront_pt = Pt(top_middle_pt.x, top_middle_pt.y+box.get_length()*.1)
-    SlTrace.lg("infront_pt: %s" % infront_pt)
-    infront_coords = box.get_coords(infront_pt)
-    return infront_coords
    
    
 for nb in range(len(colors)):
@@ -77,12 +55,15 @@ for nb in range(len(colors)):
     box_perimeter_points = box.get_perimeter_abs_points()
     SlTrace.lg("box: perimeter abs points: %s" % box_perimeter_points)
     box_perimeter_coords = box.get_perimeter_coords()
-    in_front_coords = infront_coords(box)
-    SlTrace.lg("infront coords: %s" % (in_front_coords))
-    
+    SlTrace.lg("box; perimeter coords: %s" % box_perimeter_coords)
+    in_front_coords = box.get_infront_coords()
+    SlTrace.lg("in front coords: %s" % (in_front_coords))
+    in_front_internal_points = box.get_internal_points(in_front_coords)
+    SlTrace.lg("in front internal points: %s" % in_front_internal_points)
     canvas.create_polygon(box_perimeter_coords, fill="", outline="black")
     mkpoint(box_pos_coords[0],box_pos_coords[1], color="red")
     mkpoint(in_front_coords[0],in_front_coords[1], color="green")
+    
     c2 = box_perimeter_coords[2:4]
     mkpoint(c2[0],c2[1], color="blue")
     c3 = box_perimeter_coords[4:6]

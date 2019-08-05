@@ -17,11 +17,12 @@ class CarInfo:
     """
     Car startup info
     """
-    def __init__(self, car, road_start):
+    def __init__(self, car_race, car, road_start):
         """ Car startup info
         :car: 
         :road: in which the car starts
         """
+        self.car_race = car_race
         self.car = car
         self.road_start = road_start
         self.road_cur = self.road_start
@@ -30,8 +31,43 @@ class CarInfo:
         self.distance = 0.              # Miles
         self.side_dist = 0.             # Distance (fraction of width from left side of road)
         self.speed = 0.                 # mph
-                      
+        self.car_maximum_speed = car.get_maximum_speed()              
+        self.car_minimum_speed = car.get_minimum_speed()              
+        self.car_turn_speed = car.get_turn_speed()              
+        self.car_acc_speed = car.get_acc_speed()
+        
+        
+    def get_turn_speed(self):
+        return self.car_turn_speed 
+    
+    def get_maximum_speed(self):
+        return self.car_maximum_speed
+    
+    def get_minimum_speed(self):
+        return self.car_minimum_speed
+    
+    def faster(self):
+        """ Increase all speed limits
+        Let cars catch up
+        """
+        speed_mult = self.car_race.speed_mult 
+        self.car_maximum_speed *= speed_mult
+        self.car_minimum_speed *= speed_mult
+        self.car_turn_speed *= speed_mult
+    
+    def slower(self):
+        """ Decrease all speed limits
+        Let cars catch up
+        """
+        speed_mult = self.car_race.speed_mult 
+        self.car_maximum_speed /= speed_mult
+        self.car_minimum_speed /= speed_mult
+        self.car_turn_speed /= speed_mult
 
+    def get_acc_speed(self, delta_time=1.):
+        return self.car_acc_speed*delta_time
+    
+    
 class CircuitSegmentInfo:
     """ Info for each segment to facilitate car placement
     """
@@ -70,14 +106,15 @@ class CarRace:
         self.circuit_dist = 1            # Circut distance in top level
         self.running = False
         self.pausing = False
+        self.speed_mult = 2.            # faster/slower
         
-        
-    def add_car_info(self, car, road):
+    def add_car_info(self, race, car, road):
         """ Setup car startup info
+        :race: connection to race (self, CarRace)
         :car: car to add
         :road: car starting road
         """
-        car_info = CarInfo(car, road)
+        car_info = CarInfo(self, car, road)
         self.car_infos[car.id] = car_info
         return car_info
 
@@ -126,7 +163,7 @@ class CarRace:
         for car_info in self.car_infos.values():
             self.setup_car_info(car_info)        # complete info, e.g. start_dist
         self.car_states = {}    
-        for car_info_id in self.car_infos.keys():
+        for car_info_id in self.car_infos:
             self.car_states[car_info_id] = self.car_infos[car_info_id]  # set/reset to initial values   
         return True
 
@@ -178,14 +215,27 @@ class CarRace:
         self.running = False
         self.pausing = False
         self.update()
-         
+
+    def faster(self):
+        """Speed things up
+        """
+        for car_state in self.car_states:
+            car_state.faster()
+    
+    def slower(self):
+        """ Slow things down
+        """
+        for car_state in self.car_states:
+            car_state.slower()
+    
+            
     def update(self):
         """ race update function - called periodically to up state/display
         """
         self.time = time.clock()
         self.delta_time = self.time - self.prev_time
         self.prev_time = self.time
-        for car_id in list(self.car_states):
+        for car_id in list(self.car_states.keys()):
             car_state = self.car_states[car_id]
             self.update_car(car_state, delta_time=self.delta_time)
         if self.running:
@@ -217,16 +267,16 @@ class CarRace:
         road, in_road_dist = self.get_road_section(car_state)
         road_cur = road
         if issubclass(type(road), RoadTurn):
-            if car_state.speed > car.get_turn_speed():
-                car_state.speed = (car.get_turn_speed()+car_state.speed)/2
+            if car_state.speed > car_state.get_turn_speed():
+                car_state.speed = (car_state.get_turn_speed()+car_state.speed)/2
         elif issubclass(type(road), RoadStrait):
             if issubclass(type(road_prev), RoadTurn):
-                car_state.speed += random.randint(0,3)*car.get_acc_speed(delta_time)  # random burst
-            car_state.speed += car.get_acc_speed(delta_time)
-        if car_state.speed > car.get_maximum_speed():
-            car_state.speed = (car.get_maximum_speed()+car_state.speed)/2
-        if car_state.speed < car.get_minimum_speed():
-            car_state.speed = car.get_minimum_speed()
+                car_state.speed += random.randint(0,3)*car_state.get_acc_speed(delta_time)  # random burst
+            car_state.speed += car_state.get_acc_speed(delta_time)
+        if car_state.speed > car_state.get_maximum_speed():
+            car_state.speed = (car_state.get_maximum_speed()+car_state.speed)/2
+        if car_state.speed < car_state.get_minimum_speed():
+            car_state.speed = car_state.get_minimum_speed()
 
         car_position = road.get_position_at(dist=in_road_dist, side_dist=car.side_dist)        
         car.set_position(position=car_position)
@@ -267,5 +317,5 @@ class CarRace:
                     and car_circuit_dist <= segment_info.end_dist):
                 return segment_info.road, car_circuit_dist-segment_info.start_dist
             
-        raise SelectError("get_road_section outside race track")
-                
+        SlTrace.lg("get_road_section circuit_dist: %.2f is outside race track")
+        return segment_info.road, car_circuit_dist-segment_info.segment_info.end_dist        

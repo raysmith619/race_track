@@ -100,9 +100,10 @@ class RoadTrack(BlockPanel):
             self.id_blocks[entry.id] = entry
 
 
-    def remove_entry(self, entries_ids):
+    def remove_entry(self, entries_ids, release=True):
         """ Remove entry(s) from track
         :entries_ids: entries/ids
+        :release: release resources (so it can't be readded/displayed
         """
         if not isinstance(entries_ids, list):
             entries_ids = [entries_ids]     # list of one
@@ -118,7 +119,8 @@ class RoadTrack(BlockPanel):
                         SlTrace.lg("delete road: %d" % entry_id)
                     road = self.roads[entry_id]
                     self.clear_selected_block(entry_id)
-                    road.remove_display_objects()
+                    if release:
+                        road.remove_display_objects()
                     del self.roads[entry_id]
             else:
                 if entry_id in self.cars:
@@ -126,7 +128,8 @@ class RoadTrack(BlockPanel):
                         SlTrace.lg("delete car: %d" % entry_id)
                     self.clear_selected_block(entry_id)
                     car = self.cars[entry_id]
-                    car.remove_display_objects()
+                    if release:
+                        car.remove_display_objects()
                     del self.cars[entry_id]
              
             

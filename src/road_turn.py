@@ -180,8 +180,9 @@ class RoadTurn(RoadBlock):
         return add_rot
 
 
-    def get_front_addon_position(self):
+    def get_front_addon_position(self, nlengths=1):
         """ Get point on which to place a forward "addon" block
+        :nlengths: number of lengths forward default:1  ???TBD not understood yet
         :returns: point (Pt) in containers reference 
         """
         arc = self.get_arc()
@@ -205,6 +206,33 @@ class RoadTurn(RoadBlock):
         """ Return turn arc
         """
         return self.comps[0].arc
+
+        
+    def get_infront_coords(self):
+        """ Adhock "infront point"
+        
+        :return coordinates (within candidate block)
+        simulate Pt(.5, 1+fraction) which doesn't seem to work
+        """
+        fraction = .2                   # Ammount in front as a fraction of our height
+        ppcs = self.get_perimeter_coords()
+        if self.get_modifier() == "left":
+            ppcs = ppcs[6:] + ppcs[0:6]
+        else:
+            ppcs = ppcs[2:] + ppcs[0:2]
+        x0,y0 = ppcs[0], ppcs[1]        # 0,0 lower left corner (box coordinates(0,0))
+        x1, y1 = ppcs[2], ppcs[3]       # 1,0 Upper left corner (box coordinates)
+        x2, y2 = ppcs[4], ppcs[5]       # 1,1 Upper right corner
+        x3, y3 = ppcs[6], ppcs[7]       # 1,0 Lower right corner
+        middle_top_coords = [(x1+x2)/2., (y1+y2)/2.]
+        middle_bottom_coords = [(x0+x3)/2., (y0+y3)/2.]
+        SlTrace.lg("middle_top: %s middle_bottom: %s" % (middle_top_coords, middle_bottom_coords))
+        bottom_to_top = [middle_top_coords[0]-middle_bottom_coords[0],
+                          middle_top_coords[1]-middle_bottom_coords[1]]
+        bottom_to_top_fract = [bottom_to_top[0]*fraction, bottom_to_top[1]*fraction]
+        infront_coords = [middle_top_coords[0]+bottom_to_top_fract[0],
+                               middle_top_coords[1]+bottom_to_top_fract[1]]
+        return infront_coords
     
     
     def new_arc(self, arc):

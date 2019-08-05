@@ -58,10 +58,14 @@ class RoadPanel(RoadBlock):
         self.entries = []       # Entries e.g. roads
 
 
+    def get_canvas(self):
+        return self.canvas
+    
+
     def get_race_track(self):
         return self.race_track
     
-
+    '''
     def get_absolute_points(self, points=None):
         if points is None:
             p1 = Pt(0,0)
@@ -70,7 +74,7 @@ class RoadPanel(RoadBlock):
             p4 = Pt(1,0)
             points = [p1,p2,p3,p4]
         return super().get_absolute_points(points)
-
+    '''
 
     def add_entry(self, entry, origin="road_panel"):
         """ Add next entry

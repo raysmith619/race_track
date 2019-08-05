@@ -68,7 +68,7 @@ class RoadBlock(BlockBlock):
         :back_road: road for which this is a front_road
         :marked: Set true for tracking / debugging
         """
-        SlTrace.lg("\nRoadBlock: %s %s container: %s" % (road_type, self, container))
+        SlTrace.lg("\nRoadBlock: %s %s container: %s" % (road_type, self, container), "block create")
         self.marked = marked    
         self.road_type = road_type
         self.road_width = road_width 
@@ -186,16 +186,15 @@ class RoadBlock(BlockBlock):
         if race_track is None:
             return None
         
-        in_front_pt = self.get_relative_point(.5,1.1)    # In the middle a bit infromt
-        in_front_abs_pt = self.get_absolute_point(in_front_pt)
-        add_pos_coords = self.pts2coords(in_front_abs_pt)
+        add_pos_coords = self.get_infront_coords()
         if SlTrace.trace("front_road"):
-            SlTrace.lg("%s in_front_pt %s abs_pt:%s coords:%s" % (self, in_front_pt, in_front_abs_pt, add_pos_coords))
+            SlTrace.lg("%s coords:%s" % (self, add_pos_coords))
         front_road = race_track.get_entry_at(*add_pos_coords,
                                                    entry_type="road")
         if front_road is None:
             SlTrace.lg("get_front_road(%s) finds nothing in front at: %s" % (self, add_pos_coords))
-            SlTrace.lg(" % coords: %s " % (self, self.get_absolute_points()))
+            SlTrace.lg(" %s coords: %s " % (self, self.get_absolute_points()))
+            self.mkpoint(add_pos_coords[0], add_pos_coords[1], "orange")
             front_road2 = race_track.get_entry_at(*add_pos_coords,
                                                    entry_type="road")
             return front_road2

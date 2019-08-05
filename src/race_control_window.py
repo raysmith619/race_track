@@ -42,14 +42,20 @@ class RaceControlWindow(SelectControlWindow):
         
         controls_frame = self.top_frame
         
-        spin_flip_frame = Frame(controls_frame)
-        spin_flip_frame.pack(side="top", fill="x", expand=True)
-        self.set_fields(spin_flip_frame, "spin_flip", title="Race Running")
+        setup_frame = Frame(controls_frame)
+        setup_frame.pack(side="top", fill="x", expand=True)
+        self.set_fields(setup_frame, "spin_flip", title="Race Running")
         self.set_button(field="race", label="Setup", command=self.race_setup)
         self.set_button(field="race", label="Start", command=self.race_start)
         self.set_button(field="race", label="Pause", command=self.race_pause)
         self.set_button(field="race", label="Continue", command=self.race_continue)
         self.set_button(field="race", label="Stop", command=self.race_stop)
+
+        running_frame = Frame(setup_frame)
+        running_frame.pack(side="top", fill="x", expand=True)
+        self.set_fields(running_frame, "run", title="Running")
+        self.set_button(field="running", label="Faster", command=self.race_faster)
+        self.set_button(field="running", label="Slower", command=self.race_slower)
          
         
         self.arrange_windows()
@@ -79,6 +85,14 @@ class RaceControlWindow(SelectControlWindow):
             
     def race_stop(self):
         self.command_control("race_stop")
+
+            
+    def race_faster(self):
+        self.command_control("race_faster")
+            
+    def race_slower(self):
+        self.command_control("race_slower")
+ 
     
     def update_window(self):
         if self.mw is None:
