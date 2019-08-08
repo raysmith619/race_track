@@ -1,13 +1,21 @@
 from tkinter import *
 from homcoord import *
+from enum import Enum
 
 from select_trace import SlTrace
 from select_error import SelectError
 
 from block_arrow import BlockArrow
+from block_cross import BlockCross
 from road_block import RoadBlock,SurfaceType
 from road_strait import RoadStrait
 from road_turn import RoadTurn
+        
+        
+class KeyState(Enum):
+    ADD_ROAD = 1
+    MOVE_GROUP = 2
+    EXTEND_ROAD = 3
 
 
 class TrackAdjustment:
@@ -19,6 +27,7 @@ class TrackAdjustment:
         """ Setup selection blocks
         :race_track: connection to race track for info and control
         :block: block, around which adjustments are made
+        :x:    Current mouse position default: center of block
         :addition_blocks: list of blocks, one of which, if selected, adds the corresponding block to the track
         :shifting_blocks: list of blocks, one of which, if selected, shifts all the selected blocks in the
                             corresponding direction
@@ -27,6 +36,8 @@ class TrackAdjustment:
         self.race_track = race_track
         self.block = block
         self.start_coords = None        # Flag for start
+        if x is None:
+            [x,y] = block.get_center_coords()
         self.initial_pt = self.block.get_internal_point(coords=[x,y]) 
         self.adj_block = adj_block
         self.addition_blocks = addition_blocks
@@ -124,7 +135,6 @@ class TrackAdjustment:
         else:
             SlTrace.lg("track_adjust_key %s not yet supported" % key)
             return False
-        
         return True
 
 
@@ -148,6 +158,8 @@ class TrackAdjustment:
         :modifier: left/right
         :over_road_ok:  ok to go over other road segment
         """
+        race_track = self.race_track
+        self.remove_markers()       # Avoid colliding with markers
         if not self.road_room_check(self.block, road_type=road_type, modifier=modifier,
                                over_road_ok=over_road_ok):
             return False
@@ -166,6 +178,7 @@ class TrackAdjustment:
             return False
         self.remove_markers()
         self.show_track_adjustments(new_block)
+        self.race_track.add_to_group(new_block)
         return True 
 
 
@@ -237,12 +250,10 @@ class TrackAdjustment:
     def remove_markers(self):
         """ Remove adjustment markers' blocks/display
         """
-        if self.block is not None:
-            if self.adj_block is not None:
-                self.adj_block.remove_display_objects()    
-                self.race_track.remove_entry(self.adj_block)
-                self.adj_block = None
-            del self.block.comps[-1]
+        if self.adj_block is not None:
+            self.adj_block.remove_display_objects()    
+            self.race_track.remove_entry(self.adj_block)
+            self.adj_block = None
         for block in self.addition_blocks:
             self.race_track.remove_entry(block)
         self.addition_blocks = []    
@@ -251,8 +262,7 @@ class TrackAdjustment:
         self.shifting_blocks = []    
         for block in self.undo_blocks:
             self.race_track.remove_entry(block)
-        self.undo_blocks = []
-        self.race_track.track_adjustment = None     # Hide
+
 
     def show_track_adjustments(self, block): 
         """ Display distinctly track building control
@@ -280,7 +290,6 @@ class TrackAdjustment:
         if race_track.track_adjustment is not None:
             self.remove_markers()
         self.block = block              # Make new focus
-        race_track.set_key_state()
         SlTrace.lg("\nshow_track_adjustments: block: %s coords:%s" % (block, block.get_coords()))
         initial_coords = block.get_center_coords()
         block_coords = block.get_coords()
@@ -289,21 +298,35 @@ class TrackAdjustment:
         y_fudge = (block_coords[3]-block_coords[1])*0
         ###initial_coords[1] += int(y_fudge)                                # HACK adjustment
         start_coords = initial_coords
-        self.start_coords = start_coords
+        self.initial_coords = self.start_coords = start_coords
         SlTrace.lg("start_coords: %s" % start_coords)
         SlTrace.lg("awaiting mouse down at %s" % start_coords)
-        race_track.move_cursor(x=start_coords[0], y=start_coords[1]) 
-
-        additions = []
-        xkwargs = {'fill' : 'pink'}
-        adj_block = BlockArrow(container=block, color="orange", xkwargs=xkwargs)
-        block.comps.append(adj_block)
-        ###self.race_track.remove_entry(block)     # TFD - to avoid view/selection
-        block.display()
-        self.adj_block = adj_block
+        race_track.move_cursor(x=start_coords[0], y=start_coords[1])
+        self.change_key_state(race_track.key_state) 
         race_track.track_adjustment = self      # Mark it so race track can see
         return True
 
+
+    def change_key_state(self, key_state=KeyState.EXTEND_ROAD):
+        """ Change key state / view
+        :key_state:  new state
+        """
+        race_track = self.race_track
+        self.remove_markers()
+        block = self.block
+        if race_track.key_state == KeyState.EXTEND_ROAD or race_track.key_state == KeyState.ADD_ROAD:
+            adj_block = race_track.front_place_type(block, BlockArrow, grouped=False, width=block.get_width(),
+                                                    height=block.get_length(),
+                                                    color="pink")
+        else:
+            adj_block = race_track.front_place_type(block, BlockCross, grouped=False, width=block.get_width(),
+                                                    height=block.get_length(),
+                                                    color="orange")
+        self.adj_block = adj_block
+        block.display()
+        adj_block.display()
+        self.adj_block = adj_block
+        
 
 
     def snap_shot(self, save=True):

@@ -139,8 +139,7 @@ CarBinSetup(car_bin)
 if starter_track:
     road_track = tR.get_road_track()
     RoadTrackSetup(road_track)
-
-tR.set_reset()
+    tR.set_reset()
 
 
 ###RoadBinSetup(road_track)

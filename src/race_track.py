@@ -3,7 +3,6 @@
 Basis of a race track
 Includes RoadTrack with road and car bins
 """
-from enum import Enum
 import winsound
 from tkinter import *
 from homcoord import *
@@ -22,13 +21,7 @@ from car_simple import CarSimple
 from block_block import BlockBlock
 from block_mouse import BlockMouse
 from car_race import CarRace
-from track_adjustment import TrackAdjustment
-        
-        
-class KeyState(Enum):
-    ADD_ROAD = 1
-    MOVE_GROUP = 2
-    EXTEND_ROAD = 3
+from track_adjustment import TrackAdjustment, KeyState
 
 
 class SnapShot:
@@ -40,6 +33,7 @@ class SnapShot:
         self.selects_list = []    
         self.key_state = KeyState.ADD_ROAD
         self.track_adjustment = None        # When set, control track adjustment by mouse positioning
+        self.road_groups = []
 
 
 class RaceTrack(RoadTrack, BlockMouse):
@@ -64,6 +58,7 @@ class RaceTrack(RoadTrack, BlockMouse):
             mw = Tk()
         self.mw = mw
         self.motion_bind_id = None
+        self.races = []
         self.car_bin = None             # Set if present
         self.road_bin = None
         self.road_track = None
@@ -77,7 +72,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         canvas = self.get_canvas()
         if canvas is None:
             self.canvas = Canvas(width=self.cv_width, height=self.cv_height)
-        self.road_groups = []    # Each group is a dictionary of roads by block id
+        self.road_groups = [{}]    # Each group is list of roads by block id
         self.cur_road_group = None  # Index of current group, else None
         self.key_state = KeyState.ADD_ROAD
         
@@ -371,6 +366,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         ctrl = (state & 0x4) != 0
         alt   = (state & 0x8) != 0 or (state & 0x80) != 0
         shift = (state & 0x1) != 0
+        SlTrace.lg("key_down: %s" % key)
         if ctrl:
             self.ctrl_down = True
         else:
@@ -389,11 +385,25 @@ class RaceTrack(RoadTrack, BlockMouse):
             self.race_start()
             return
         
+        if key.lower() == "r":
+            self.snap_shot()
+            self.reset_cmd()
+            return    
+        
         if key.lower() == "s":
             self.snap_shot()
             self.race_pause()
             return    
-            
+
+        if key == "space":
+            if self.key_state == KeyState.EXTEND_ROAD:
+                self.key_state = KeyState.MOVE_GROUP
+            elif self.key_state == KeyState.MOVE_GROUP:
+                self.key_state = KeyState.EXTEND_ROAD
+            if self.track_adjustment is not None:
+                self.track_adjustment.change_key_state(self.key_state)      # Change, if required
+            return
+        
 
         if self.key_state == KeyState.EXTEND_ROAD and self.track_adjustment == None:
             self.key_state = KeyState.ADD_ROAD      # Force add road
@@ -405,8 +415,9 @@ class RaceTrack(RoadTrack, BlockMouse):
                 self.save_bin_selection(road)
                 self.set_selected(road.id)
                 x = road.get_coords()[0] + 50 
-                y = self.road_track.get_coords()[1] - 50
-            new_road = self.add_to_track(road, x=x,  y=y)
+                y = self.road_track.get_coords()[1] - 200
+            self.add_to_track(road, x=x,  y=y)
+            self.set_key_state(KeyState.EXTEND_ROAD)
             return
         
         elif self.key_state == KeyState.MOVE_GROUP:
@@ -432,26 +443,53 @@ class RaceTrack(RoadTrack, BlockMouse):
     def key_move(self, group_index, key):
         """ Move all members of group based on key
         :group_index: index in self.road_groups
-        :key:  key indicationg movement: left, right, up, down (??? delete, dup???
+        :key:  key indicating movement: left, right, up, down (??? delete, dup???
         """
-        
+        head_block = self.get_head_block()
+        self.remove_adj_markers()
         road_group = self.road_groups[group_index]
-        for road in road_group:
+        if len(road_group) == 0:
+            return False                #Nothing in group
+        
+        road1 = next(iter(road_group.values()))    # Use dimensions of first one
+        width = road1.get_width()
+        height = road1.get_length()
+        
+        for road in road_group.values():
             if key == "Up":
-                pos_adj =  Pt(0, road.get_height())
+                pos_adj =  Pt(0, height)
             elif key == "Left":
-                pos_adj =  Pt(-road.get_width(), 0)
+                pos_adj =  Pt(-width, 0)
             elif key == "Down":
-                pos_adj =  Pt(0, -road.get_height())
+                pos_adj =  Pt(0, -height)
             elif key == "Right":
-                pos_adj =  Pt(road.get_width(), 0)
+                pos_adj =  Pt(width, 0)
             else:
                 self.beep()
                 SlTrace.lg("Unrecognized group move key %s" % key)
                 return False
+            position = road.get_position()
             position += pos_adj
             road.set_position(position=position)
+            road.display()
+        if head_block is not None:
+            self.show_track_adjustments(head_block)
         return True
+
+
+    def get_head_block(self):
+        if self.track_adjustment is None:
+            return None
+        
+        return self.track_adjustment.block
+    
+
+    def remove_adj_markers(self):
+        """ Remove any current adjustment visual aids
+        """
+        if self.track_adjustment is not None:
+            self.track_adjustment.remove_markers()
+            
 
     def group_start_add(self, road):
         """ start a group of connected roads or add to existing group
@@ -817,8 +855,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         if display:
             new_block.display()
         if select and issubclass(type(block), RoadBlock):
-            self.key_state = KeyState.MOVE_GROUP
-            self.group_start_add(block)
             self.show_track_adjustments(new_block, x=x, y=y)
         return new_block        
 
@@ -893,6 +929,11 @@ class RaceTrack(RoadTrack, BlockMouse):
         for selected in self.get_selected(origin="road_track"):
             if selected.block.origin == "road_track":
                 snap.selects_list.append(copy.deepcopy(selected))
+        snap.cur_road_group = self.cur_road_group
+        snap.road_groups = []
+        for group in self.road_groups:
+            snap.road_groups.append(group)
+            
         if save:
             self.snap_shot_undo_stack.append(snap)
         return snap
@@ -919,6 +960,10 @@ class RaceTrack(RoadTrack, BlockMouse):
             self.set_selected(selected.block.id, x_coord=selected.x_coord, y_coord=selected.y_coord,
                               x_coord_prev=selected.x_coord_prev, y_coord_prev=selected.y_coord_prev,
                               keep_old=True)
+        self.road_groups = []
+        for group in snap.road_groups:
+            self.road_groups.append(group)
+        self.cur_road_group = snap.cur_road_group
 
         for road in snap.roads.values():
             road.display()
@@ -1020,7 +1065,6 @@ class RaceTrack(RoadTrack, BlockMouse):
             returned to upon "reset" cmd
         """
         self.reset_snap = self.snap_shot(save=False)
-        self.races = []         # Filled with races, one per entry
 
 
     def reset_cmd(self):
@@ -1035,6 +1079,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         self.road_groups = []                   # Each group is a dictionary of roads by block id
         self.cur_road_group = None              # Index of current group, else None
         self.key_state = KeyState.ADD_ROAD
+        self.races = []
         return True
 
 
@@ -1066,10 +1111,15 @@ class RaceTrack(RoadTrack, BlockMouse):
         if not over_road_ok:
             in_front_coords = front_block.get_infront_coords()
             x,y = in_front_coords[0],in_front_coords[1]
-            entry = self.get_entry_at(x,y)
-            if entry is not None:
-                SlTrace.lg("Would hit entry %s" % entry)
-                return False
+            entries = self.get_entry_at(x,y, all=True)
+            adj_block = None
+            if self.track_adjustment is not None:
+                adj_block = self.track_adjustment.adj_block
+            for entry in entries:
+                if adj_block is None or entry.id != adj_block.id:
+                    SlTrace.lg("Would hit entry %s" % entry)
+                    return False
+                
         return True
     
 
@@ -1220,16 +1270,21 @@ class RaceTrack(RoadTrack, BlockMouse):
     def show_track_adjustments(self, block, x=None,  y=None): 
         """ Setup and Display distinctly possible adjustment selections
         :block: around which the selections are placed - close to their possible placement
-        :x: current mouse coordinate
+                default use current block, if one
+        :x: current mouse coordinate default: current center of block
         :y:
         """
-        TrackAdjustment(self, block, x=x, y=y)        # Setup self.track_adjustment
+        TrackAdjustment(self, block, x=x, y=y)        # Setup/resetup self.track_adjustment
             
     
-    def front_place_type(self, front_block, new_type=None, modifier=None, display=False, xkwargs=None, **kwargs):
+    def front_place_type(self, front_block,
+                        new_type=None,
+                        grouped=True,
+                        modifier=None, display=False, xkwargs=None, **kwargs):
         """ Add road to front end(top end of most recently selected)
             TBD: Possibly changed to determine end of physically connected string
             Supports Road types, Car types
+            :grouped: Add to current group default: True
             :display: true => display
             :kwargs: args passed to object construction
             :returns: created object
@@ -1242,17 +1297,40 @@ class RaceTrack(RoadTrack, BlockMouse):
             new_block.set_position(add_pos)   # Small optimization
         if add_rot != new_block.get_rotation():
             new_block.set_rotation(add_rot)   # Small optimization
-        self.add_entry(new_block)
+        self.add_entry(new_block, grouped=grouped)
         if display:
             new_block.display()
         return new_block
         
-    def add_entry(self, entries):
+    def add_entry(self, entries, grouped=True):
         """ Add cas/roads to track
         :entries: car/roads to add
+        :grouped: Add to current group
         """
+        if grouped:
+            self.add_to_group(entries)
         self.road_track.add_entry(entries)
 
+
+    def add_to_group(self, entries, group_index=None):
+        """ Add road/car to group
+        :entries: one/list of road/cars to be added
+        :group_index: group in which to add default: most recent
+        """
+        if not isinstance(entries, list):
+            entries = [entries]
+
+        if len(self.road_groups) == 0:
+            self.road_groups.append({})        
+        if group_index is None:
+            group_index = len(self.road_groups)-1
+        while len(self.road_groups) < group_index:
+            self.road_groups.append({})
+        group = self.road_groups[group_index]
+        self.cur_road_group = group_index        
+        for entry in entries:
+            group[entry.id] = entry
+            
 
 
 
@@ -1279,11 +1357,11 @@ class RaceTrack(RoadTrack, BlockMouse):
             return True
         
         elif command == "race_faster":
-            self.race_shutdown()
+            self.race_faster()
             return True
         
         elif command == "race_slower":
-            self.race_shutdown()
+            self.race_slower()
             return True
         
         else:
@@ -1304,8 +1382,9 @@ class RaceTrack(RoadTrack, BlockMouse):
 
        """
         self.clear_track_adjustments()
-        
-        self.races = []         # Filled with races, one per entry
+        self.clear_bin_selection()
+        self.clear_selected()
+        ###self.races = []         # Filled with races, one per entry
         races_by_car_id = {}    # To keep track of cars which have been placed
         races_by_road_id = {}   # To keep track of roads which have been placed
         cars = self.get_cars()
@@ -1341,6 +1420,7 @@ class RaceTrack(RoadTrack, BlockMouse):
             if not race.setup():
                 return False
         
+        self.set_reset()        # Setup for recovery
         return True
     
 

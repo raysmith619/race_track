@@ -261,6 +261,25 @@ class RoadTurn(RoadBlock):
         """
         arc = self.get_arc()
         radius = self.get_length()
-        dist = radius*2*pi*arc/360.
+        dist = radius*2*pi*abs(arc)/360.
         return dist
+
+
+    def get_rotation_at(self, dist=0.):
+        """ Get road rotation at distance within the road segment
+        approximate by a linear interperlation of start and end
+        :dist: fractional distance through the road segment
+        """
+        end_rotation = self.get_front_addon_rotation()
+        start_rotation = self.get_rotation()
+        if end_rotation > start_rotation + 180.:
+            start_rotation += 360.
+        
+        leng_dist = self.get_length_dist()
+        fract = dist/leng_dist
+        rotation = (start_rotation + (end_rotation-start_rotation)*fract)%360
+        if SlTrace.trace("show_turn"):
+            SlTrace.lg("turn:id: %3d (%.2f): start: %.2f rot: %.2f end: %.2f" %
+                        (self.id, fract, start_rotation, rotation, end_rotation))
+        return rotation
         

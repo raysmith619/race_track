@@ -69,15 +69,62 @@ class CarSimple(CarBlock):
                             xkwargs={'fill' : 'lightgray'})
         self.comps.append(car_windshield)
 
-        front_driver_light_pt = Pt(0,1)
-        front_pass_light_pt = Pt(1,1)
-        '''TBD:front_driver_light = BlockArc(container=car_base,
-                        position=car_base.get_relative_point(front_driver_light_pt),
-                        start=0, arc=180,
-                        radius=.03
+        head_light_color = "yellow"
+        hl_hight = .06
+        hl_width = 4*hl_hight
+        hl_inset = hl_width*.1
+        hl_fw_pt = Pt(0,hl_hight)
+        hl_rw_pt = Pt(hl_width,0)
+        fd_light_pt = Pt(hl_inset,1-hl_hight)
+        fd_light_pts = [fd_light_pt, fd_light_pt+hl_fw_pt,
+                        fd_light_pt+hl_fw_pt+hl_rw_pt,
+                        fd_light_pt+hl_rw_pt]
+
+        front_driver_light = BlockPolygon(container=self,
+                        color=head_light_color,
+                        points=fd_light_pts
                         )
         self.comps.append(front_driver_light)
-        '''
+        fp_light_pt = Pt(1-hl_width-hl_inset,1-hl_hight)
+        fp_light_pts = [fp_light_pt, fp_light_pt+hl_fw_pt,
+                        fp_light_pt+hl_fw_pt+hl_rw_pt,
+                        fp_light_pt+hl_rw_pt]
+
+        front_pass_light = BlockPolygon(container=self,
+                        color=head_light_color,
+                        points=fp_light_pts
+                        )
+        self.comps.append(front_pass_light)
+
+        rear_light_color = "red"
+        rl_radius = .05
+        rl_dia = 2*rl_radius
+        rl_inset = rl_dia*.1
+        rl_fw_pt = Pt(0,rl_radius)
+        rl_rw_pt = Pt(rl_dia,0)
+        rd_light_pt = Pt(rl_inset, 0)
+        rd_light_pts = [rd_light_pt, rd_light_pt+rl_fw_pt,
+                        rd_light_pt+rl_fw_pt+rl_rw_pt,
+                        rd_light_pt+rl_rw_pt]
+
+        rear_driver_light = BlockPolygon(container=self,
+                        color=rear_light_color,
+                        points=rd_light_pts
+                        )
+        self.comps.append(rear_driver_light)
+        
+        rp_light_pt = Pt(1-rl_dia-rl_inset, 0)
+        rp_light_pts = [rp_light_pt, rp_light_pt+rl_fw_pt,
+                        rp_light_pt+rl_fw_pt+rl_rw_pt,
+                        rp_light_pt+rl_rw_pt]
+
+        rear_pass_light = BlockPolygon(container=self,
+                        color=rear_light_color,
+                        points=rp_light_pts
+                        )
+        self.comps.append(rear_pass_light)
+
+    
     def display(self):
         """ Display thing as a list of components
         """

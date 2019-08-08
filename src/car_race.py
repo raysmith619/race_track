@@ -219,14 +219,18 @@ class CarRace:
     def faster(self):
         """Speed things up
         """
-        for car_state in self.car_states:
-            car_state.faster()
+        for car_id in list(self.car_states.keys()):
+            if car_id in self.car_states:
+                car_state = self.car_states[car_id]
+                car_state.faster()
     
     def slower(self):
         """ Slow things down
         """
-        for car_state in self.car_states:
-            car_state.slower()
+        for car_id in list(self.car_states.keys()):
+            if car_id in self.car_states:
+                car_state = self.car_states[car_id]
+                car_state.slower()
     
             
     def update(self):
@@ -236,8 +240,9 @@ class CarRace:
         self.delta_time = self.time - self.prev_time
         self.prev_time = self.time
         for car_id in list(self.car_states.keys()):
-            car_state = self.car_states[car_id]
-            self.update_car(car_state, delta_time=self.delta_time)
+            if car_id in self.car_states:
+                car_state = self.car_states[car_id]
+                self.update_car(car_state, delta_time=self.delta_time)
         if self.running:
             interval_msec = int(self.get_update_interval()*1000)
             self.race_track.mw.after(interval_msec, self.update)

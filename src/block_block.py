@@ -1314,6 +1314,7 @@ class BlockBlock:
         from road_turn import RoadTurn
         from car_simple import CarSimple
         from block_arrow import BlockArrow
+        from block_cross import BlockCross
         track = self.get_road_track()
         if new_type == RoadStrait:    # TFD
             new_block = RoadStrait(track,
@@ -1349,6 +1350,17 @@ class BlockBlock:
             else:
                 rot = self.rotation
             new_block = BlockArrow(track,
+                                    position=self.position,
+                                    rotation=rot,
+                                    **kwargs)
+        elif new_type == BlockCross:            # For direction adjustment selectors
+            if modifier == "left":
+                rot = self.rotation + 90.
+            elif modifier == "right":
+                rot = self.rotation - 90.
+            else:
+                rot = self.rotation
+            new_block = BlockCross(track,
                                     position=self.position,
                                     rotation=rot,
                                     **kwargs)
