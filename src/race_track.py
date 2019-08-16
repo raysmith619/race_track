@@ -3,6 +3,7 @@
 Basis of a race track
 Includes RoadTrack with road and car bins
 """
+from datetime import date
 import winsound
 from tkinter import *
 from homcoord import *
@@ -22,7 +23,38 @@ from block_block import BlockBlock
 from block_mouse import BlockMouse
 from car_race import CarRace
 from track_adjustment import TrackAdjustment, KeyState
+from block_commands import BlockCommands
 
+
+class TRLink:
+    def __init__(self, block, id_front=None, id_back=None):
+        self.block = block
+        self.id_front = id_front
+        self.id_back = id_back
+    
+class  TrackRoadLinks:
+    def __init__(self, race_track):
+        self.race_track = race_track
+        self.links = {}
+
+    def add(self, link):
+        block = link.block
+        self.links[block.id] = link
+
+    def update_links(self):
+        """ Update road links between track segments
+        """
+        race_track = self.race_track
+        for link in self.links.values():
+            block = link.block
+            if link.id_front is not None:
+                block_front = race_track.get_road(link.id_front)
+                block.front_road = block_front
+                block_front.back_road = block
+            if link.id_back is not None:
+                block_back = race_track.get_road(link.id_back)
+                block.back_road = block_back
+                block_back.back_road = block
 
 class SnapShot:
     """ Snap shot info to provide undo info
@@ -780,7 +812,10 @@ class RaceTrack(RoadTrack, BlockMouse):
                 SlTrace.lg("%s rot: %.0f pos: %s  front add: rot: %.0f pos: %s" %
                            (block, block.get_rotation(), block.get_position_coords(),
                            block.get_front_addon_rotation(), block.abs_front_pos()))
-                
+                if block.back_road is not None:
+                    SlTrace.lg("    back_road: %s" % block.back_road)
+                if block.front_road is not None:
+                    SlTrace.lg("    front_road: %s" % block.front_road)
     def mouse3_down_motion (self, event):
         ###cnv.itemconfigure (tk.CURRENT, fill ="blue")
         mouse_info = self.get_info(mouse_no=3, event=event)
@@ -925,6 +960,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         road_track = self.get_road_track()
         for road in road_track.roads.values():
             snap.roads[road.id] = road.dup(keep_id=True)
+        for car in road_track.cars.values():
+            snap.cars[car.id] = car.dup(keep_id=True)
         # restore from list
         for selected in self.get_selected(origin="road_track"):
             if selected.block.origin == "road_track":
@@ -1526,8 +1563,104 @@ class RaceTrack(RoadTrack, BlockMouse):
     def race_slower(self):
         for race in self.races:
             race.slower()
-            
+
+
+    def save_track_file(self, file_name):
+        """ Save current track state to file
+        """
+        SlTrace.lg("save_track_file %s" % file_name)
+        with open(file_name, "w") as fout:
+            print("# %s" % file_name, file=fout)
+            today = date.today()
+            d2 = today.strftime("%B %d, %Y")
+            print("# On: %s\n" % d2, file=fout)
+            print("from homcoord import *", file=fout)
+            print("from road_strait import RoadStrait", file=fout)
+            print("from road_turn import RoadTurn", file=fout)
+            print("from car_simple import CarSimple", file=fout)
+            print("from block_commands import *", file=fout)
+            print("", file=fout)
+            road_track = self.get_road_track()
+            for road in road_track.roads.values():
+                road.out_road_cmd(file=fout)
+            for car in road_track.cars.values():
+                car.out_car_cmd(file=fout)
+            # restore from list TBD : save select list ???
+            # save groups ??? TBD
         
+        return True
+            
+    def load_track_file(self, file_name):
+        """ Load track file
+        """
+        self.snap_shot()
+        SlTrace.lg("load_track_file %s" % file_name)
+        self.track_links = TrackRoadLinks(self)
+        base_id = 1
+        next_id = self.get_next_id()
+        if  next_id != base_id:
+            next_id += 100 
+            next_id = 100 * round(next_id/100) + 1
+            self.set_next_id(next_id)
+        self.load_track_file_base_id = base_id
+        with open(file_name, "r") as fin:
+            SlTrace.lg("# %s" % file_name)
+            self.load_track_commands = BlockCommands(self, src_file_path=file_name)
+            res = self.load_track_commands.procFilePy(file_name)
+            self.track_links.update_links()     # Set links between road segments
+            return res
+        return False
+
+    """
+    Track command file  functions
+    """
+    def car(self, id=None, classtype=None, **kwargs):    
+        """ Create road on track, possibly from previously saved road.
+            :id: relative block id - actual id will be next suitable id larger than current block id
+            :classtype:  type of road e.g. RoadStrait, RoadTurn
+            :returns: True iff successful 
+        """
+        base_id = self.load_track_file_base_id
+        id_adj = base_id-1
+        if issubclass(classtype, CarSimple):
+            new_block = CarSimple(track=self, id=id+id_adj, origin="road_track",
+                           **kwargs)
+        else:
+            raise SelectError("Unsupported car type %s" % classtype)
+        self.add_entry(new_block)
+        new_block.display()    
+        return new_block        
+    
+    
+    
+    def road(self, id=None, classtype=None, front_road=None, back_road=None, **kwargs):    
+        """ Create road on track, possibly from previously saved road.
+            :id: relative block id - actual id will be next suitable id larger than current block id
+            :classtype:  type of road e.g. RoadStrait, RoadTurn
+            :front_road: link to block in front of this one
+            :back_road: link to block in back of this one
+            :kwargs: Additional new block creation parameters
+            :returns: True iff successful 
+        """
+        base_id = self.load_track_file_base_id
+        id_adj = base_id-1
+        our_id = id + id_adj
+        if issubclass(classtype, RoadTurn):
+            new_block = RoadTurn(track=self, id=id+id_adj, origin="road_track",
+                           **kwargs)
+        elif issubclass(classtype, RoadStrait):
+            new_block = RoadStrait(track=self, id=id+id_adj, origin="road_track",
+                           **kwargs)
+        else:
+            raise SelectError("Unsupported road type %s" % classtype)
+        if front_road is not None or back_road is not None:
+            link = TRLink(new_block, id_front=front_road, id_back=back_road)
+            self.track_links.add(link)
+        self.add_entry(new_block)
+        new_block.display()    
+        return new_block        
+
+    
 if __name__ == "__main__":
     import os
     import sys

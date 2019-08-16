@@ -272,8 +272,11 @@ class RoadTurn(RoadBlock):
         """
         end_rotation = self.get_front_addon_rotation()
         start_rotation = self.get_rotation()
-        if end_rotation > start_rotation + 180.:
-            start_rotation += 360.
+        if abs(end_rotation - start_rotation) > 180.:
+            if end_rotation > start_rotation:
+                start_rotation += 360.
+            else:
+                end_rotation += 360.
         
         leng_dist = self.get_length_dist()
         fract = dist/leng_dist

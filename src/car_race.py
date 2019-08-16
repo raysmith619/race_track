@@ -275,8 +275,8 @@ class CarRace:
             if car_state.speed > car_state.get_turn_speed():
                 car_state.speed = (car_state.get_turn_speed()+car_state.speed)/2
         elif issubclass(type(road), RoadStrait):
-            if issubclass(type(road_prev), RoadTurn):
-                car_state.speed += random.randint(0,3)*car_state.get_acc_speed(delta_time)  # random burst
+            ###if issubclass(type(road_prev), RoadTurn):
+            car_state.speed += random.randint(5,20)*car_state.get_acc_speed(delta_time)  # random burst
             car_state.speed += car_state.get_acc_speed(delta_time)
         if car_state.speed > car_state.get_maximum_speed():
             car_state.speed = (car_state.get_maximum_speed()+car_state.speed)/2

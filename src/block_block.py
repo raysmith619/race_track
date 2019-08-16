@@ -134,6 +134,19 @@ class BlockBlock:
         return tag
     
     @classmethod
+    def get_next_id(cls):
+        """ Get next generated id (one more than previously generated)
+        """
+        return BlockBlock.id+1
+    
+    @classmethod
+    def set_next_id(cls, next_id):
+        """ Set next id to be generated id (one less than next)
+        :next_id:  next id to be given (by new_id)
+        """
+        BlockBlock.id = next_id-1
+    
+    @classmethod
     def new_id(cls):
         BlockBlock.id += 1
         return BlockBlock.id
@@ -434,6 +447,7 @@ class BlockBlock:
         
             
     def __init__(self,
+                 id=None,
                  canvas=None,
                  cv_width=None,
                  cv_height=None,
@@ -452,6 +466,7 @@ class BlockBlock:
                  state=None,
                  xkwargs=None):
         """ Setup object
+        :id:  Unique object id, default: created
         :canvas: optional canvas argument - provides Canvas if no container
         :cv_width: optional canvas width
         :cv_height: optional canvas height
@@ -476,11 +491,13 @@ class BlockBlock:
         :xkwargs:   optional canvas operation args (dictionary to avoid name
                                                     collisions)
         """
+        if id is None:
+            id = BlockBlock.new_id()
+        self.id = id
         self.canvas_tags = {}           # tags if any displayed
         self.origin = origin            # Set by others
         self.selected = False
         self.state = state              # Set by others
-        self.id = BlockBlock.new_id()
         if tag is None:
             tag = self.__class__.__name__
         self.tag = tag
@@ -1670,6 +1687,26 @@ class BlockBlock:
             y = cv_height - y 
             coords.extend([x,y])
         return coords
+
+    def wrap_out_str(self, out_str, addon, maxlen=80):
+        """ Add to output string, wrapping if longer than max
+        :out_str: output str
+        :addon: string to be appended
+        :max: maximum length on line
+        """
+        out_str_new = out_str + addon
+        line_len = 0
+        for c in out_str_new[::-1]:
+            if c == "\n":
+                break
+            line_len += 1
+        if line_len > maxlen:
+            if addon.startswith(","):
+                out_str += ","      # Move comma to previous line
+                addon = addon[1:]
+            out_str += "\n    "
+        out_str += addon
+        return out_str
 
 
     def over_rect(self, point, rect=None):

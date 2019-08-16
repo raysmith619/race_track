@@ -76,6 +76,28 @@ class CarBlock(BlockBlock):
             comps = [comps]
         for comp in comps:
             self.comps.append(comp)
+    
+
+    def out_car_cmd(self, file=None):
+        """ Write out car command text
+        :file:  oputput file handle
+        """
+        out_str = "car(id=%d" % self.id
+        out_str = self.wrap_out_str(out_str, ", classtype=%s" % self.__class__.__name__)
+        if hasattr(self, "modifier") and self.modifier is not None and self.modifier != "":
+            out_str = self.wrap_out_str(out_str, ", modifier=%s" % self.get_modifier())
+        if self.position is not None:
+            out_str = self.wrap_out_str(out_str, ", position=Pt%s" % self.position)
+        if self.rotation is not None:
+            out_str = self.wrap_out_str(out_str, ", rotation=%f" % self.rotation)
+        if self.width is not None:
+            out_str = self.wrap_out_str(out_str, ", width=%f" % self.width)
+        if self.height is not None:
+            out_str = self.wrap_out_str(out_str, ", height=%f" % self.height)
+        if self.base_color is not None:
+            out_str = self.wrap_out_str(out_str, ", base_color=\"%s\"" % self.base_color)
+        out_str += ")"
+        print(out_str, file=file)
 
     
     def display(self):

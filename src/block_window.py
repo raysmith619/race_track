@@ -7,6 +7,7 @@ import os
 from tkinter import *
 from select_trace import SlTrace
 from trace_control import TraceControl
+from psutil._psutil_windows import proc_cmdline
 
 # Here, we are creating our class, Window, and inheriting from the Frame
 # class. Frame is a class from the tkinter module. (see Lib/tkinter/__init__)
@@ -61,7 +62,23 @@ class BlockWindow(Frame):
         self.cmd_file = cmd_file    # if not None, execute this cmd file
         #with that, we want to then run init_window, which doesn't yet exist
         self.init_window()
+        self.file_save_proc = None
+        self.file_load_proc = None
 
+    
+    def set_file_save_proc(self, proc):
+        """ Save File Menu save cmd
+        :proc: Save file cmd
+        """
+        self.file_save_proc = proc
+
+    
+    def set_file_load_proc(self, proc):
+        """ Save File Menu save cmd
+        :proc: Save file cmd
+        """
+        self.file_load_proc = proc
+        
         
     #Creation of init_window
     def init_window(self):
@@ -80,8 +97,8 @@ class BlockWindow(Frame):
 
         # create the file object)
         filemenu = Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Open", command=self.File_Open_tbd)
-        filemenu.add_command(label="Save", command=self.File_Save_tbd)
+        filemenu.add_command(label="Load", command=self.File_Load)
+        filemenu.add_command(label="Save", command=self.File_Save)
         filemenu.add_separator()
         filemenu.add_command(label="Log", command=self.LogFile)
         filemenu.add_command(label="Properties", command=self.Properties)
@@ -182,11 +199,17 @@ class BlockWindow(Frame):
         else:
             sys.exit()    
             
-    def File_Open_tbd(self):
-        print("File_Open_menu to be determined")
+    def File_Load(self):
+        if self.file_load_proc is not None:
+            return self.file_load_proc()
+        
+        print("File_Load to be determined")
 
-    def File_Save_tbd(self):
-        print("File_Save_menu to be determined")
+    def File_Save(self):
+        if self.file_save_proc is not None:
+            return self.file_save_proc()
+        
+        print("File_Save to be determined")
 
     def add_menu_command(self, label=None, call_back=None):
         """ Add simple menu command to top menu

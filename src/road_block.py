@@ -328,8 +328,34 @@ class RoadBlock(BlockBlock):
         """
         self.front_road = road
         road.back_road = self
-         
+    
 
+    def out_road_cmd(self, file=None):
+        """ Write out road command text
+        :file:  oputput file handle
+        """
+        out_str = "road(id=%d" % self.id
+        out_str = self.wrap_out_str(out_str, ", classtype=%s" % self.__class__.__name__)
+        if hasattr(self, "modifier") and self.modifier is not None and self.modifier != "":
+            out_str = self.wrap_out_str(out_str, ", modifier=%s" % self.get_modifier())
+        if self.position is not None:
+            out_str = self.wrap_out_str(out_str, ", position=Pt%s" % self.position)
+        if self.rotation is not None:
+            out_str = self.wrap_out_str(out_str, ", rotation=%f" % self.rotation)
+        if self.width is not None:
+            out_str = self.wrap_out_str(out_str, ", width=%f" % self.width)
+        if self.height is not None:
+            out_str = self.wrap_out_str(out_str, ", height=%f" % self.height)
+        if hasattr(self, "arc") and self.arc is not None:
+            out_str = self.wrap_out_str(out_str, ", arc=%f" % self.arc)
+        if self.front_road is not None:
+            out_str = self.wrap_out_str(out_str, ", front_road=%d" % self.front_road.id)
+        if self.back_road is not None:
+            out_str = self.wrap_out_str(out_str, ", back_road=%d" % self.back_road.id)
+        out_str += ")"
+        print(out_str, file=file)
+        
+        
     def get_road_surface(self):
         return self.track.get_road_surface()
 

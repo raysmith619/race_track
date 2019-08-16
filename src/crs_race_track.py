@@ -6,6 +6,7 @@ Includes RoadTrack with road and car bins
 import os
 import sys
 from tkinter import *    
+from tkinter import filedialog
 import argparse
 from homcoord import *
 
@@ -48,7 +49,7 @@ dispall = False      # Display every change
 starter_track = True
 starter_track = False
 update_interval = .02
-
+race_track_src_dir = "../crsrc"  # Race track source directory
 parser.add_argument('--width=', type=int, dest='width', default=width)
 parser.add_argument('--height=', type=int, dest='height', default=height)
 parser.add_argument('--maximum_speed=', '-mas', type=float, dest='maximum_speed', default=maximum_speed)
@@ -141,6 +142,45 @@ if starter_track:
     RoadTrackSetup(road_track)
     tR.set_reset()
 
+
+def save_track_proc():
+    """ Save current track state
+    """
+    SlTrace.lg("save_track_proc")
+    filename =  filedialog.asksaveasfilename(
+        initialdir = "../crsrc",
+        title = "Track Files",
+        filetypes = (("track files","*.crsrc"),
+                     ("all files","*.*")))
+    if not re.match(r'^.*\.[^.]+$', filename):
+        filename += ".crsrc"
+    
+    SlTrace.lg("filename %s" % filename)
+    track_file = filename
+    tR.save_track_file(track_file)
+    
+app.set_file_save_proc(save_track_proc)
+
+
+def load_track_proc():
+    """ Load current track state
+    """
+    SlTrace.lg("load_track_proc")
+    filename =  filedialog.askopenfilename(
+        initialdir = "../crsrc",
+        title = "Track Files",
+        filetypes = (("track files","*.crsrc"),
+                     ("all files","*.*")))
+    if not re.match(r'^.*\.[^.]+$', filename):
+        filename += ".crsrc"
+    
+    SlTrace.lg("filename %s" % filename)
+    
+    track_file = filename
+    tR.load_track_file(track_file)
+
+
+app.set_file_load_proc(load_track_proc)
 
 ###RoadBinSetup(road_track)
 tR.display()
