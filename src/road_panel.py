@@ -58,6 +58,12 @@ class RoadPanel(RoadBlock):
         self.entries = []       # Entries e.g. roads
 
 
+    def resize(self, position=None,
+                    width=None, height=None):
+        self.width = width
+        self.height = height
+        
+
     def get_canvas(self):
         return self.canvas
     

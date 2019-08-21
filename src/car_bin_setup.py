@@ -13,6 +13,9 @@ from car_simple import CarSimple
 
 class CarBinSetup:
     def __init__(self, car_bin):
+        """ Setup car bin
+        :car_bin: car bin instance
+        """
         self.car_bin = car_bin
         
         SlTrace.lg("CarBinSetup: car_bin pts: %s" % self.car_bin.get_absolute_points())

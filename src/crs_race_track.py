@@ -46,8 +46,9 @@ pos_x = None
 pos_y = None
 parser = argparse.ArgumentParser()
 dispall = False      # Display every change
+track_file = r'..\crsrc\double_circled.crsrc'
 starter_track = True
-starter_track = False
+###starter_track = False
 update_interval = .02
 race_track_src_dir = "../crsrc"  # Race track source directory
 parser.add_argument('--width=', type=int, dest='width', default=width)
@@ -59,6 +60,7 @@ parser.add_argument('--turn_speed=', '-tus', type=float, dest='turn_speed', defa
 parser.add_argument('--pos_x=', type=float, dest='pos_x', default=pos_x)
 parser.add_argument('--pos_y=', type=float, dest='pos_y', default=pos_y)
 parser.add_argument('--rotation=', type=float, dest='rotation', default=rotation)
+parser.add_argument('--track_file', '-tf', dest='track_file', default=track_file)
 parser.add_argument('--starter_track', '-st', type=bool, dest='starter_track', default=starter_track)
 parser.add_argument('--update_interval', '-ui', type=float, dest='update_interval', default=update_interval)
 args = parser.parse_args()             # or die "Illegal options"
@@ -72,6 +74,7 @@ minimum_speed = args.minimum_speed
 ncar = args.ncar
 rotation = args.rotation
 starter_track = args.starter_track
+track_file = args.track_file
 update_interval = args.update_interval
 
 SlTrace.lg("%s %s\n" % (os.path.basename(sys.argv[0]), " ".join(sys.argv[1:])))
@@ -133,13 +136,17 @@ race_ctl = RaceControlWindow("Race Control",
                          command_control_proc=tR.race_control_proc)    
 road_bin = tR.get_road_bin()
 RoadBinSetup(road_bin)
-
+select_road = True
+if select_road:
+    road = road_bin.get_entry(0)            # Select first entry in road_bin
+    tR.set_selected(road.id)
+    tR.save_bin_selection(road)
 car_bin = tR.get_car_bin()
 CarBinSetup(car_bin)
 
 if starter_track:
     road_track = tR.get_road_track()
-    RoadTrackSetup(road_track)
+    RoadTrackSetup(road_track, race_track_file=track_file)
     tR.set_reset()
 
 

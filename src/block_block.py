@@ -1019,6 +1019,23 @@ class BlockBlock:
         if cv_width is None:
             cv_width = 1.
         return cv_width
+    
+    
+    def set_cv_height(self, height):
+        """ Return canvas width (or projected width)
+        """
+        top = self.get_top_container()
+        top.cv_height = height
+        return height
+    
+    
+    def set_cv_width(self, width):
+        """ Return canvas width (or projected width)
+        """
+        top = self.get_top_container()
+        top.cv_width = width
+        return width
+
 
 
     def has_canvas(self):
@@ -1332,6 +1349,7 @@ class BlockBlock:
         from car_simple import CarSimple
         from block_arrow import BlockArrow
         from block_cross import BlockCross
+        from block_pointer import BlockPointer
         track = self.get_road_track()
         if new_type == RoadStrait:    # TFD
             new_block = RoadStrait(track,
@@ -1378,6 +1396,17 @@ class BlockBlock:
             else:
                 rot = self.rotation
             new_block = BlockCross(track,
+                                    position=self.position,
+                                    rotation=rot,
+                                    **kwargs)
+        elif new_type == BlockPointer:            # For direction adjustment selectors
+            if modifier == "left":
+                rot = self.rotation + 90.
+            elif modifier == "right":
+                rot = self.rotation - 90.
+            else:
+                rot = self.rotation
+            new_block = BlockPointer(track,
                                     position=self.position,
                                     rotation=rot,
                                     **kwargs)

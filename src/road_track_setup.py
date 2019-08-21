@@ -15,17 +15,31 @@ from road_turn import RoadTurn
 
 
 class RoadTrackSetup:
-    def __init__(self, road_track, ncar=None, display=True):
+    def __init__(self, road_track, ncar=None,
+                 race_track_file=None,
+                  display=True):
         """ Create a demonstration track
         :road_track: track object
         :ncar: number of cars in race default: self.ncar
+        :race_track_file: race track file to use, if present
         :dispaly: display when created default: display
         """
         self.road_track = road_track
+        race_track = self.get_race_track()
         if ncar is None:
             ncar = road_track.ncar
         self.ncar = ncar
+        if race_track_file is not None:
+            race_track.load_track_file(race_track_file)
+        else:
+            self.set_builtin_track()
+        race_track.race_setup()
+        race_track.race_start()
+
+
+    def setup_builtin_track(self):
         race_track = self.get_race_track()
+        road_track = self.road_track            
         road_bin = self.get_road_bin()
         car_bin = race_track.get_car_bin()
         
@@ -96,8 +110,6 @@ class RoadTrackSetup:
             race_track.add_to_track(car,x=x, y=y, rotation=road.get_rotation_at(dist=0),
                                     select=False, display=False)
         self.display()
-        race_track.race_setup()
-        race_track.race_start()
 
  
     def display(self):

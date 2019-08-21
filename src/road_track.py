@@ -82,6 +82,16 @@ class RoadTrack(BlockPanel):
         self.background = "lightgreen"
         self.road_width_feet = road_width_feet
 
+
+
+
+    def resize(self, position=None,
+                    width=None, height=None):
+        self.position = position
+        self.width = self.width
+        self.height = height
+
+
     def add_entry(self, entries, origin="road_track"):
         """ Add next entry
         :entries: single or list of entities (cars,roads) 

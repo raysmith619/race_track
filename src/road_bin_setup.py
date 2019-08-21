@@ -16,6 +16,8 @@ from road_turn import RoadTurn
 
 class RoadBinSetup:
     def __init__(self, road_bin):
+        """ Setup road bin with choices to add
+        """
         self.road_bin = road_bin
         
         SlTrace.lg("RoadBinSetup: road_bin pts: %s" % self.road_bin.get_absolute_points())
@@ -35,7 +37,6 @@ class RoadBinSetup:
                                  height=entry_height)
         SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
         self.add_entry(entry)
-
         
         pos_turn = Pt(pos.x+entry_width+entry_space, entry_space)
         radius_turn = entry_width

@@ -174,6 +174,11 @@ class PositionWindow(SelectControlWindow):
         if self.mw is None:
             return
 
+    def clear(self):
+        self.set_vals()
+        res = self.change_control("clear_track")
+        return res
+
     def set(self):
         self.set_vals()
         res = self.change_control("set_track")

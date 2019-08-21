@@ -105,6 +105,8 @@ class SelectControlWindow(Toplevel):
         self.bottom_frame = bottom_frame
         
         self.set_fields(bottom_frame, "base", title="")
+        self.set_button(field="clear", label="Clear", command=self.clear)
+        self.set_sep()
         self.set_button(field="set", label="Set", command=self.set)
         self.set_sep()
         self.set_button(field="Reset", label="Reset", command=self.reset)
@@ -119,6 +121,9 @@ class SelectControlWindow(Toplevel):
 
     """ Control functions for game control
     """
+    def clear(self):
+        self.set_vals()
+
     def set(self):
         self.set_vals()
 

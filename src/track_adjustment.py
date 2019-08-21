@@ -7,7 +7,8 @@ from select_error import SelectError
 
 from block_arrow import BlockArrow
 from block_cross import BlockCross
-from road_block import RoadBlock,SurfaceType
+from block_pointer import BlockPointer, AdjChoice
+from road_block import RoadBlock, SurfaceType
 from road_strait import RoadStrait
 from road_turn import RoadTurn
         
@@ -44,7 +45,8 @@ class TrackAdjustment:
         self.shifting_blocks = shifting_blocks
         self.undo_blocks = undo_blocks
         self.show_track_adjustments(block)            # Display adjustments
-
+        self.prev_adjust_x = -1                         # HACK - TO BE REMOVED ???
+        self.prev_adjust_y = -1
     
     def ck_adjust(self, x=None, y=None):
         """ Check if adjustment has been selected
@@ -87,6 +89,32 @@ class TrackAdjustment:
         return False
 
 
+    def mouse_down(self, x=None, y=None):
+        """ Process mouse_down for track adjustment
+        :x: x coord
+        :y: y coord
+        """
+        adj_block = self.adj_block
+        if adj_block is None:
+            return False
+        
+        if not adj_block.is_at(x,y):
+            return False
+       
+        choice = adj_block.highlight(x,y, display=False)       # Display after update
+        if choice == AdjChoice.FORWARD:
+            chg_rotation = 0.
+        elif choice == AdjChoice.LEFT:
+            chg_rotation = 90.
+        elif choice == AdjChoice.BACKWARD:
+            chg_rotation = 180.
+        elif choice == AdjChoice.RIGHT:
+            chg_rotation = 270.     
+        else:
+            raise SelectError("Unsupported adjChoice:%s" % choice)
+        return self.change_rotation(chg_rotation)
+    
+    
     def track_adjust_key(self, key):
         """ Adjust track based on key
         :key: key(keysym) pressed
@@ -113,29 +141,45 @@ class TrackAdjustment:
             return False
         
         chg_rotation = (360. + new_rotation-go_rotation) % 360.
+        return self.change_rotation(chg_rotation)
+    
+    
+    def change_rotation(self, chg_rotation):
+        """ Change rotation adding appropriate road
+        :chg_rotation: angle of change
+        """
+
         SlTrace.lg("chg_rotation: %.1f" % chg_rotation)
+        chg_rotation = chg_rotation % 360.
         ang_close = .1
         
         if abs(chg_rotation) < ang_close:   # 0 
             self.snap_shot()
             SlTrace.lg("track_adjust: Adding RoadStrait")
-            if not self.add_new_block(RoadStrait):
-                return False
+            if self.add_new_block(RoadStrait):
+                return True
         elif abs(chg_rotation-90.) < ang_close:
             self.snap_shot()
-            if not self.add_new_block(RoadTurn, modifier="left"):
-                return False
+            if self.add_new_block(RoadTurn, modifier="left"):
+                return True
         elif abs(chg_rotation-180.) < ang_close:
             return self.backup_adj()    # Backup if possible
 
         elif abs(chg_rotation-270.) < ang_close:
             self.snap_shot()
-            if not self.add_new_block(RoadTurn, modifier="right"):
-                return False
+            if self.add_new_block(RoadTurn, modifier="right"):
+                return True
         else:
-            SlTrace.lg("track_adjust_key %s not yet supported" % key)
+            SlTrace.lg("change_rotation %.2f not yet supported" % chg_rotation)
+            self.beep()
             return False
-        return True
+        
+        SlTrace.lg("Can't go in %.2f deg" % chg_rotation)
+        self.beep()
+        if self.block is None:
+            raise SelectError("No block to go back to")
+        self.show_track_adjustments(self.block)
+        return False
 
 
     def backup_adj(self):
@@ -196,45 +240,27 @@ class TrackAdjustment:
         :x:        current coordinates of mouse
         :y:
         """
-        x_threshold = 1.5       # Strait
-        y_threshold = .1        # Strait
-        block = self.block
-        new_internal_pt = block.get_internal_point([x,y])
-        SlTrace.lg("track_adjust internal pt: %s" % new_internal_pt)
-        block_coords = block.get_coords()
-        SlTrace.lg("track_adjust block: %s coords: %s" % (block, block_coords))
-        initial_pt = self.block.get_internal_point(self.initial_coords)
-        chg_pt = new_internal_pt - self.initial_pt
-        SlTrace.lg("\nchg_pt: %s new:%s, x=%.2f, y=%.2f start:%s %s" %
-                    (chg_pt, new_internal_pt, x, y, initial_pt, self.initial_coords))
-        new_block = None            # Set if adding a new block
-        if abs(chg_pt.y) > abs(chg_pt.x):
-            if abs(chg_pt.y) >= y_threshold:
-                SlTrace.lg("track_adjust: Adding RoadStrait")
-                new_block = self.block.front_add_type(RoadStrait)
-                SlTrace.lg("new block: %s at x=%.2f y=%.2f" % (new_block, x, y))
-            else:
-                ck_block.set_position(ck_block.get_relative_point(chg_pt))
-                SlTrace.lg("just moving: %s at x=%.2f y=%.2f" % (ck_block, x, y))
-        else:
-            if abs(chg_pt.x) >= x_threshold:
-                SlTrace.lg("track_adjust: Adding RoadTurn")
-                if chg_pt.x <= 0.:
-                    modifier = "left"
-                else:
-                    modifier = "right"
-                new_block = self.block.front_add_type(RoadTurn, modifier=modifier)
-                SlTrace.lg("new block: %s at x=%.2f y=%.2f" % (new_block, x, y))
-            else:
-                ck_block.set_position(ck_block.get_relative_point(chg_pt))    
-        if new_block is not None:
-            self.remove_markers()
-            self.race_track.add_entry(new_block)
-            self.show_track_adjustments(new_block)
+        if ck_block.is_at(x=x, y=y):
+            self.highlight(ck_block, x=x, y=y)
             return True
         
         return False
-
+    
+    def highlight(self, ck_block, x=None,  y=None):
+        """ Hilight adjustment block
+        :ck_block: adjustment block
+        :x: x coordinate
+        :y: y coordinate
+        """
+        if ck_block is None:
+            return False
+        
+        ck_block.highlight(x=x, y=y)
+        if ck_block.comps:
+            for comp in ck_block.comps:
+                self.addition_blocks.append(comp)
+        return True
+    
 
     def road_room_check(self, road, road_type=None, modifier=None, over_road_ok=False):
         """ Check if adding a new block if possible doesn't go over edge or get so close
@@ -291,18 +317,10 @@ class TrackAdjustment:
             self.remove_markers()
         self.block = block              # Make new focus
         SlTrace.lg("\nshow_track_adjustments: block: %s coords:%s" % (block, block.get_coords()))
-        initial_coords = block.get_center_coords()
-        block_coords = block.get_coords()
-        x_fudge = (block_coords[6]-block_coords[0])*1.5           # HACK adjusment
-        initial_coords[0] += int(x_fudge)                            # HACK adjusment
-        y_fudge = (block_coords[3]-block_coords[1])*0
-        ###initial_coords[1] += int(y_fudge)                                # HACK adjustment
-        start_coords = initial_coords
-        self.initial_coords = self.start_coords = start_coords
-        SlTrace.lg("start_coords: %s" % start_coords)
-        SlTrace.lg("awaiting mouse down at %s" % start_coords)
-        race_track.move_cursor(x=start_coords[0], y=start_coords[1])
-        self.change_key_state(race_track.key_state) 
+        self.change_key_state(race_track.key_state)
+        adj_coords = self.adj_block.get_adj_coords(AdjChoice.FORWARD) 
+        race_track.move_cursor(x=adj_coords[0], y=adj_coords[1])
+        self.highlight(self.adj_block, x=adj_coords[0], y=adj_coords[1])
         race_track.track_adjustment = self      # Mark it so race track can see
         return True
 
@@ -315,7 +333,7 @@ class TrackAdjustment:
         self.remove_markers()
         block = self.block
         if race_track.key_state == KeyState.EXTEND_ROAD or race_track.key_state == KeyState.ADD_ROAD:
-            adj_block = race_track.front_place_type(block, BlockArrow, grouped=False, width=block.get_width(),
+            adj_block = race_track.front_place_type(block, BlockPointer, grouped=False, width=block.get_width(),
                                                     height=block.get_length(),
                                                     color="pink")
         else:
