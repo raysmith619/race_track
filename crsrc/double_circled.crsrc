@@ -2,80 +2,80 @@
 # On: August 21, 2019
 
 from homcoord import *
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from road_turn import RoadTurn
 from car_simple import CarSimple
 from block_commands import *
 
-road(id=368, classtype=RoadStrait, position=Pt(0.13, 0.565), rotation=0.000000,
+road(id=368, classtype=RoadStraight, position=Pt(0.13, 0.565), rotation=0.000000,
      width=0.050000, height=0.100000, front_road=403, back_road=959)
-road(id=403, classtype=RoadStrait, position=Pt(0.13, 0.665), rotation=0.000000,
+road(id=403, classtype=RoadStraight, position=Pt(0.13, 0.665), rotation=0.000000,
      width=0.050000, height=0.100000, front_road=415, back_road=368)
-road(id=415, classtype=RoadStrait, position=Pt(0.13, 0.765), rotation=0.000000,
+road(id=415, classtype=RoadStraight, position=Pt(0.13, 0.765), rotation=0.000000,
      width=0.050000, height=0.100000, front_road=437, back_road=403)
 road(id=437, classtype=RoadTurn, position=Pt(0.13, 0.865), rotation=0.000000,
      width=0.050000, height=0.050000, arc=-90.000000, front_road=444,
      back_road=415)
-road(id=444, classtype=RoadStrait, position=Pt(0.18, 0.915), rotation=270.000000,
+road(id=444, classtype=RoadStraight, position=Pt(0.18, 0.915), rotation=270.000000,
      width=0.050000, height=0.100000, front_road=451, back_road=437)
-road(id=451, classtype=RoadStrait, position=Pt(0.28, 0.915), rotation=270.000000,
+road(id=451, classtype=RoadStraight, position=Pt(0.28, 0.915), rotation=270.000000,
      width=0.050000, height=0.100000, front_road=458, back_road=444)
-road(id=458, classtype=RoadStrait, position=Pt(0.38, 0.915), rotation=270.000000,
+road(id=458, classtype=RoadStraight, position=Pt(0.38, 0.915), rotation=270.000000,
      width=0.050000, height=0.100000, front_road=465, back_road=451)
-road(id=465, classtype=RoadStrait, position=Pt(0.48, 0.915), rotation=270.000000,
+road(id=465, classtype=RoadStraight, position=Pt(0.48, 0.915), rotation=270.000000,
      width=0.050000, height=0.100000, front_road=472, back_road=458)
-road(id=472, classtype=RoadStrait, position=Pt(0.58, 0.915), rotation=270.000000,
+road(id=472, classtype=RoadStraight, position=Pt(0.58, 0.915), rotation=270.000000,
      width=0.050000, height=0.100000, front_road=479, back_road=465)
-road(id=479, classtype=RoadStrait, position=Pt(0.68, 0.915), rotation=270.000000,
+road(id=479, classtype=RoadStraight, position=Pt(0.68, 0.915), rotation=270.000000,
      width=0.050000, height=0.100000, front_road=486, back_road=472)
-road(id=486, classtype=RoadStrait, position=Pt(0.78, 0.915), rotation=270.000000,
+road(id=486, classtype=RoadStraight, position=Pt(0.78, 0.915), rotation=270.000000,
      width=0.050000, height=0.100000, front_road=584, back_road=479)
 road(id=584, classtype=RoadTurn, position=Pt(0.88, 0.915), rotation=270.000000,
      width=0.050000, height=0.050000, arc=-90.000000, front_road=591,
      back_road=486)
-road(id=591, classtype=RoadStrait, position=Pt(0.93, 0.865), rotation=180.000000,
+road(id=591, classtype=RoadStraight, position=Pt(0.93, 0.865), rotation=180.000000,
      width=0.050000, height=0.100000, front_road=598, back_road=584)
-road(id=598, classtype=RoadStrait, position=Pt(0.93, 0.765), rotation=180.000000,
+road(id=598, classtype=RoadStraight, position=Pt(0.93, 0.765), rotation=180.000000,
      width=0.050000, height=0.100000, front_road=605, back_road=591)
-road(id=605, classtype=RoadStrait, position=Pt(0.93, 0.665), rotation=180.000000,
+road(id=605, classtype=RoadStraight, position=Pt(0.93, 0.665), rotation=180.000000,
      width=0.050000, height=0.100000, front_road=612, back_road=598)
-road(id=612, classtype=RoadStrait, position=Pt(0.93, 0.565), rotation=180.000000,
+road(id=612, classtype=RoadStraight, position=Pt(0.93, 0.565), rotation=180.000000,
      width=0.050000, height=0.100000, front_road=620, back_road=605)
-road(id=620, classtype=RoadStrait, position=Pt(0.93, 0.465), rotation=180.000000,
+road(id=620, classtype=RoadStraight, position=Pt(0.93, 0.465), rotation=180.000000,
      width=0.050000, height=0.100000, front_road=627, back_road=612)
-road(id=627, classtype=RoadStrait, position=Pt(0.93, 0.365), rotation=180.000000,
+road(id=627, classtype=RoadStraight, position=Pt(0.93, 0.365), rotation=180.000000,
      width=0.050000, height=0.100000, front_road=634, back_road=620)
-road(id=634, classtype=RoadStrait, position=Pt(0.93, 0.265), rotation=180.000000,
+road(id=634, classtype=RoadStraight, position=Pt(0.93, 0.265), rotation=180.000000,
      width=0.050000, height=0.100000, front_road=704, back_road=627)
 road(id=704, classtype=RoadTurn, position=Pt(0.93, 0.165), rotation=180.000000,
      width=0.050000, height=0.050000, arc=-90.000000, front_road=712,
      back_road=634)
-road(id=712, classtype=RoadStrait, position=Pt(0.88, 0.115), rotation=90.000000,
+road(id=712, classtype=RoadStraight, position=Pt(0.88, 0.115), rotation=90.000000,
      width=0.050000, height=0.100000, front_road=719, back_road=704)
-road(id=719, classtype=RoadStrait, position=Pt(0.78, 0.115), rotation=90.000000,
+road(id=719, classtype=RoadStraight, position=Pt(0.78, 0.115), rotation=90.000000,
      width=0.050000, height=0.100000, front_road=726, back_road=712)
-road(id=726, classtype=RoadStrait, position=Pt(0.68, 0.115), rotation=90.000000,
+road(id=726, classtype=RoadStraight, position=Pt(0.68, 0.115), rotation=90.000000,
      width=0.050000, height=0.100000, front_road=748, back_road=719)
-road(id=748, classtype=RoadStrait, position=Pt(0.58, 0.115), rotation=90.000000,
+road(id=748, classtype=RoadStraight, position=Pt(0.58, 0.115), rotation=90.000000,
      width=0.050000, height=0.100000, front_road=778, back_road=726)
 road(id=778, classtype=RoadTurn, position=Pt(0.48, 0.115), rotation=90.000000,
      width=0.050000, height=0.050000, arc=-90.000000, front_road=786,
      back_road=748)
-road(id=786, classtype=RoadStrait, position=Pt(0.43, 0.165), rotation=0.000000,
+road(id=786, classtype=RoadStraight, position=Pt(0.43, 0.165), rotation=0.000000,
      width=0.050000, height=0.100000, front_road=807, back_road=778)
 road(id=807, classtype=RoadTurn, position=Pt(0.43, 0.265), rotation=0.000000,
      width=0.050000, height=0.050000, arc=90.000000, front_road=815,
      back_road=786)
-road(id=815, classtype=RoadStrait, position=Pt(0.43, 0.265), rotation=90.000000,
+road(id=815, classtype=RoadStraight, position=Pt(0.43, 0.265), rotation=90.000000,
      width=0.050000, height=0.100000, front_road=822, back_road=807)
-road(id=822, classtype=RoadStrait, position=Pt(0.33, 0.265), rotation=90.000000,
+road(id=822, classtype=RoadStraight, position=Pt(0.33, 0.265), rotation=90.000000,
      width=0.050000, height=0.100000, front_road=867, back_road=815)
 road(id=867, classtype=RoadTurn, position=Pt(0.23, 0.265), rotation=90.000000,
      width=0.050000, height=0.050000, arc=-90.000000, front_road=875,
      back_road=822)
-road(id=875, classtype=RoadStrait, position=Pt(0.18, 0.315), rotation=0.000000,
+road(id=875, classtype=RoadStraight, position=Pt(0.18, 0.315), rotation=0.000000,
      width=0.050000, height=0.100000, front_road=883, back_road=867)
-road(id=883, classtype=RoadStrait, position=Pt(0.18, 0.415), rotation=0.000000,
+road(id=883, classtype=RoadStraight, position=Pt(0.18, 0.415), rotation=0.000000,
      width=0.050000, height=0.100000, front_road=936, back_road=875)
 road(id=936, classtype=RoadTurn, position=Pt(0.18, 0.515), rotation=0.000000,
      width=0.050000, height=0.050000, arc=90.000000, front_road=959,
@@ -83,76 +83,76 @@ road(id=936, classtype=RoadTurn, position=Pt(0.18, 0.515), rotation=0.000000,
 road(id=959, classtype=RoadTurn, position=Pt(0.18, 0.515), rotation=90.000000,
      width=0.050000, height=0.050000, arc=-90.000000, front_road=368,
      back_road=936)
-road(id=997, classtype=RoadStrait, position=Pt(0.2383, 0.6017),
+road(id=997, classtype=RoadStraight, position=Pt(0.2383, 0.6017),
      rotation=0.000000, width=0.050000, height=0.100000, front_road=1012,
      back_road=1621)
-road(id=1012, classtype=RoadStrait, position=Pt(0.2383, 0.7017),
+road(id=1012, classtype=RoadStraight, position=Pt(0.2383, 0.7017),
      rotation=0.000000, width=0.050000, height=0.100000, front_road=1050,
      back_road=997)
 road(id=1050, classtype=RoadTurn, position=Pt(0.2383, 0.8017), rotation=0.000000,
      width=0.050000, height=0.050000, arc=-90.000000, front_road=1058,
      back_road=1012)
-road(id=1058, classtype=RoadStrait, position=Pt(0.2883, 0.8517),
+road(id=1058, classtype=RoadStraight, position=Pt(0.2883, 0.8517),
      rotation=270.000000, width=0.050000, height=0.100000, front_road=1066,
      back_road=1050)
-road(id=1066, classtype=RoadStrait, position=Pt(0.3883, 0.8517),
+road(id=1066, classtype=RoadStraight, position=Pt(0.3883, 0.8517),
      rotation=270.000000, width=0.050000, height=0.100000, front_road=1074,
      back_road=1058)
-road(id=1074, classtype=RoadStrait, position=Pt(0.4883, 0.8517),
+road(id=1074, classtype=RoadStraight, position=Pt(0.4883, 0.8517),
      rotation=270.000000, width=0.050000, height=0.100000, front_road=1081,
      back_road=1066)
-road(id=1081, classtype=RoadStrait, position=Pt(0.5883, 0.8517),
+road(id=1081, classtype=RoadStraight, position=Pt(0.5883, 0.8517),
      rotation=270.000000, width=0.050000, height=0.100000, front_road=1089,
      back_road=1074)
-road(id=1089, classtype=RoadStrait, position=Pt(0.6883, 0.8517),
+road(id=1089, classtype=RoadStraight, position=Pt(0.6883, 0.8517),
      rotation=270.000000, width=0.050000, height=0.100000, front_road=1113,
      back_road=1081)
 road(id=1113, classtype=RoadTurn, position=Pt(0.7883, 0.8517),
      rotation=270.000000, width=0.050000, height=0.050000, arc=-90.000000,
      front_road=1121, back_road=1089)
-road(id=1121, classtype=RoadStrait, position=Pt(0.8383, 0.8017),
+road(id=1121, classtype=RoadStraight, position=Pt(0.8383, 0.8017),
      rotation=180.000000, width=0.050000, height=0.100000, front_road=1129,
      back_road=1113)
-road(id=1129, classtype=RoadStrait, position=Pt(0.8383, 0.7017),
+road(id=1129, classtype=RoadStraight, position=Pt(0.8383, 0.7017),
      rotation=180.000000, width=0.050000, height=0.100000, front_road=1137,
      back_road=1121)
-road(id=1137, classtype=RoadStrait, position=Pt(0.8383, 0.6017),
+road(id=1137, classtype=RoadStraight, position=Pt(0.8383, 0.6017),
      rotation=180.000000, width=0.050000, height=0.100000, front_road=1145,
      back_road=1129)
-road(id=1145, classtype=RoadStrait, position=Pt(0.8383, 0.5017),
+road(id=1145, classtype=RoadStraight, position=Pt(0.8383, 0.5017),
      rotation=180.000000, width=0.050000, height=0.100000, front_road=1153,
      back_road=1137)
-road(id=1153, classtype=RoadStrait, position=Pt(0.8383, 0.4017),
+road(id=1153, classtype=RoadStraight, position=Pt(0.8383, 0.4017),
      rotation=180.000000, width=0.050000, height=0.100000, front_road=1244,
      back_road=1145)
 road(id=1244, classtype=RoadTurn, position=Pt(0.8383, 0.3017),
      rotation=180.000000, width=0.050000, height=0.050000, arc=-90.000000,
      front_road=1252, back_road=1153)
-road(id=1252, classtype=RoadStrait, position=Pt(0.7883, 0.2517),
+road(id=1252, classtype=RoadStraight, position=Pt(0.7883, 0.2517),
      rotation=90.000000, width=0.050000, height=0.100000, front_road=1278,
      back_road=1244)
 road(id=1278, classtype=RoadTurn, position=Pt(0.6883, 0.2517),
      rotation=90.000000, width=0.050000, height=0.050000, arc=-90.000000,
      front_road=1286, back_road=1252)
-road(id=1286, classtype=RoadStrait, position=Pt(0.6383, 0.3017),
+road(id=1286, classtype=RoadStraight, position=Pt(0.6383, 0.3017),
      rotation=0.000000, width=0.050000, height=0.100000, front_road=1315,
      back_road=1278)
 road(id=1315, classtype=RoadTurn, position=Pt(0.6383, 0.4017), rotation=0.000000,
      width=0.050000, height=0.050000, arc=90.000000, front_road=1323,
      back_road=1286)
-road(id=1323, classtype=RoadStrait, position=Pt(0.6383, 0.4017),
+road(id=1323, classtype=RoadStraight, position=Pt(0.6383, 0.4017),
      rotation=90.000000, width=0.050000, height=0.100000, front_road=1331,
      back_road=1315)
-road(id=1331, classtype=RoadStrait, position=Pt(0.5383, 0.4017),
+road(id=1331, classtype=RoadStraight, position=Pt(0.5383, 0.4017),
      rotation=90.000000, width=0.050000, height=0.100000, front_road=1339,
      back_road=1323)
-road(id=1339, classtype=RoadStrait, position=Pt(0.4383, 0.4017),
+road(id=1339, classtype=RoadStraight, position=Pt(0.4383, 0.4017),
      rotation=90.000000, width=0.050000, height=0.100000, front_road=1521,
      back_road=1331)
 road(id=1521, classtype=RoadTurn, position=Pt(0.3383, 0.4017),
      rotation=90.000000, width=0.050000, height=0.050000, arc=-90.000000,
      front_road=1529, back_road=1339)
-road(id=1529, classtype=RoadStrait, position=Pt(0.2883, 0.4517),
+road(id=1529, classtype=RoadStraight, position=Pt(0.2883, 0.4517),
      rotation=0.000000, width=0.050000, height=0.100000, front_road=1584,
      back_road=1521)
 road(id=1584, classtype=RoadTurn, position=Pt(0.2883, 0.5517), rotation=0.000000,
