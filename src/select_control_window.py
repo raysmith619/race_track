@@ -309,10 +309,10 @@ class SelectControlWindow(Toplevel):
         win_y = self.mw.winfo_y()
         win_width = self.mw.winfo_width()
         win_height = self.mw.winfo_height()
-        self.resize_window(win_x, win_y, win_width, win_height)
+        self.set_window_size(win_x, win_y, win_width, win_height)
 
         
-    def resize_window(self, x, y, width, height, change=False):
+    def set_window_size(self, x, y, width, height, change=False):
         """ Size our window
         :change: True force window resize
         """
@@ -320,12 +320,12 @@ class SelectControlWindow(Toplevel):
         self.set_prop_val("win_y", y)
         self.set_prop_val("win_width", width)
         self.set_prop_val("win_height", height)
-        if SlTrace.trace("resize_window"):
+        if SlTrace.trace("set_window_size("):
             if ( not hasattr(self, "prev_x") or self.prev_x != x
                  or not hasattr(self, "prev_y") or self.prev_y != y
                  or not hasattr(self, "prev_width") or self.prev_width != width
                  or not hasattr(self, "prev_height") or self.prev_height != height):
-                SlTrace.lg("resize_window change=%d x=%d y=%d width=%d height=%d" % (change, x,y,width,height))
+                SlTrace.lg("set_window_size( change=%d x=%d y=%d width=%d height=%d" % (change, x,y,width,height))
             self.prev_x = x 
             self.prev_y = y
             self.prev_width = width
@@ -347,7 +347,7 @@ class SelectControlWindow(Toplevel):
         
         win_width = self.get_prop_val("win_width", self.mw.winfo_width())
         win_height = self.get_prop_val("win_height", self.mw.winfo_height())
-        self.resize_window(win_x, win_y, win_width, win_height, change=True)
+        self.set_window_size(win_x, win_y, win_width, win_height, change=True)
         self.mw.protocol("WM_DELETE_WINDOW", self.delete_window)
         self.mw.bind('<Configure>', self.win_size_event)
        

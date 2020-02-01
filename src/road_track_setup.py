@@ -7,9 +7,9 @@ from select_trace import SlTrace
 from select_error import SelectError
 
 
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from road_turn import RoadTurn
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from road_turn import RoadTurn
 
 
@@ -53,26 +53,26 @@ class RoadTrackSetup:
         
         ###road_rot = 90               # TFD going right to left
         ###pos = Pt(1-2*road_width, 1-road_length)
-        nstrait = 7
+        nstraight = 7
         abs_pos = self.road_track.get_absolute_point(pos)
         pos_coords = self.road_track.pts2coords(abs_pos)
         SlTrace.lg("Starting pos: %s %s" % (pos, pos_coords))
         start_road = None              # Set to first road of track
         for edge_no in range(1, 5):     # Edges 1 to 4
-            for i in range(nstrait):
+            for i in range(nstraight):
                 if edge_no == 1 and i == 0:                 # Edge 1
                     road = road_bin.get_entry(0)            # Use first entry in road_bin
                     entry = race_track.add_to_track(road,x=pos_coords[0], y=pos_coords[1],
                                                     select=False, display=False)
                     '''
-                    entry = RoadStrait(self.road_track,
+                    entry = RoadStraight(self.road_track,
                                              rotation=road_rot,
                                              position=pos,
                                              origin=origin)
                     '''
                     start_road = entry
                 else:
-                    entry = entry.front_add_type(new_type=RoadStrait)
+                    entry = entry.front_add_type(new_type=RoadStraight)
                 self.add_entry(entry)
                 SlTrace.lg("edge_no:%d entry:%d" % (edge_no, i))
                 SlTrace.lg("%s rot: %.0f pos: %s %s  front add: rot: %.0f pos: %s" %

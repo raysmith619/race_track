@@ -14,7 +14,7 @@ from select_error import SelectError
 
 from road_block import RoadBlock
 from road_track import RoadTrack
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from road_turn import RoadTurn
 from road_panel import RoadPanel
 from car_block import CarBlock
@@ -64,7 +64,7 @@ class SnapShot:
         self.roads = {}
         self.selects_list = []    
         self.key_state = KeyState.ADD_ROAD
-        self.track_adjustment = None        # When set, control track adjustment by mouse positioning
+        self.track_adjustment_block = None        # When set, control track adjustment by mouse positioning
         self.road_groups = []
 
 
@@ -76,14 +76,18 @@ class RaceTrack(RoadTrack, BlockMouse):
             
     def __init__(self,
                 mw=None,
-                bin_thick=50,           # Bin thickness in pixels
+                bin_thick=50,           # Bin thickness in pixels, 0 => no bins
                 **kwargs
                 ):
         """ Setup track plus bin
+        :bin_thick: bin thickness, in_pixels 0 => no bins
         :update_interval: display update interval (sec)
         if container is None:
             set width, height to pixel(absolute)
         """
+        if bin_thick is None:       # None doesn't evaluate to default
+            bin_thick = 50
+        self.bin_thick = bin_thick
         self.track_adjustment = None    # When set, control track adjustment by mouse positioning
         self.snap_shot_undo_stack = []
         self.snap_shot_redo_stack = []
@@ -111,21 +115,20 @@ class RaceTrack(RoadTrack, BlockMouse):
         self.move_cursor_x = 0
         self.move_cursor_y = 0
         
-        BlockMouse.__init__(self)
+        ###BlockMouse.__init__(self)
         # Calculate bin dimensions, as fractions of canvas
         # Attempt to give fixed bin thickness
         bin_offset = 2.         # Offset from edge
         cv_height = self.get_cv_length()
         cv_width = self.get_cv_width()
-        self.resize_window(width=cv_width, height=cv_height,
-                           bin_thick=bin_thick,
+        self.set_window_size(width=cv_width, height=cv_height,
                            bin_offset=bin_offset)
         self.set_reset()        # Set reset state - can be changed
         self.set_snap_stack = []
 
 
-    def resize_window(self, width=None, height=None,
-                      bin_thick=50,  bin_offset=2):
+    def set_window_size(self, width=None, height=None,
+                      bin_offset=2):
         """ Size/Resize track to fit in window
         :width: canvas width in pixels,
         :height: canvas height in pixels
@@ -133,8 +136,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         """
         cv_width = self.cv_width = width
         cv_height = self.cv_height = height
-        
-        SlTrace.lg("RaceTrack: width=%.1f heitht=%.1f position=%s cv_width=%.1f cv_height=%.1f"
+        bin_thick = self.bin_thick
+        SlTrace.lg("RaceTrack: width=%.1f height=%.1f position=%s cv_width=%.1f cv_height=%.1f"
            % (self.width, self.height, self.position, cv_width, cv_height))
         road_bin_height = bin_thick/cv_height
         offset_y = bin_offset/cv_height
@@ -155,23 +158,25 @@ class RaceTrack(RoadTrack, BlockMouse):
         SlTrace.lg("car_bin pos: x=%.1f(%.1f) y=%.1f(%.1f)" %
                     (self.width2pixel(car_bin_position.x),car_bin_position.x, self.height2pixel(car_bin_position.y), car_bin_position.y))
         '''
-        if self.car_bin is None:
-            self.car_bin = RoadPanel(tag="car_bin",
-                            container=self, position=car_bin_position,
-                            width=car_bin_width, height=car_bin_height,
-                            background="lightpink")
-        else:
-            self.car_bin.resize(position=car_bin_position,
-                            width=car_bin_width, height=car_bin_height)
+        if bin_thick > 0:
+            if self.car_bin is None:
+                self.car_bin = RoadPanel(tag="car_bin",
+                                container=self, position=car_bin_position,
+                                width=car_bin_width, height=car_bin_height,
+                                background="lightpink")
+            else:
+                self.car_bin.resize(position=car_bin_position,
+                                width=car_bin_width, height=car_bin_height)
+                
+        if bin_thick > 0:
+            if self.road_bin is None: 
+                self.road_bin = RoadPanel(container=self, position=road_bin_position,
+                                width=road_bin_width, height=road_bin_height,
+                                background="lightgray")
+            else:
+                self.road_bin.resize(position=road_bin_position,
+                                width=road_bin_width, height=road_bin_height)
             
-        if self.road_bin is None: 
-            self.road_bin = RoadPanel(container=self, position=road_bin_position,
-                            width=road_bin_width, height=road_bin_height,
-                            background="lightgray")
-        else:
-            self.road_bin.resize(position=road_bin_position,
-                            width=road_bin_width, height=road_bin_height)
-        
         if self.road_track is None:    
             self.road_track = RoadTrack(container=self, position=track_position,
                                width=track_width, height=track_height,
@@ -180,7 +185,37 @@ class RaceTrack(RoadTrack, BlockMouse):
         else:
             self.road_track.resize(position=track_position,
                                width=track_width, height=track_height)
-            
+    
+
+    def enable_window_resize(self):
+        """ Enable manual resizing after setup
+        """
+        canvas = self.get_canvas()
+        canvas.bind( '<Configure>', self.canvas_size_event)
+
+
+    def canvas_size_event(self, event):
+        """ Window sizing event
+        """
+        canvas = self.get_canvas()
+        cv_width = event.width
+        cv_height = event.height
+        SlTrace.lg("cv_width=%d cv_height=%d" % (cv_width,cv_height))
+        ###self.set_prop_val("win_x", win_x)
+        ###self.set_prop_val("win_y", win_x)
+        ###self.set_prop_val("win_width", win_width)
+        ###self.set_prop_val("win_height", win_height)
+        prev_cv_width = self.get_cv_width()
+        prev_cv_height = self.get_cv_height()
+        SlTrace.lg("prev cv_width=%d cv_height=%d" % (prev_cv_width,prev_cv_height))
+        self.set_cv_height(cv_width)
+        self.set_cv_width(cv_height)
+        ###if (abs(cv_width-prev_cv_width) < 100
+        ###    and abs(cv_height-prev_cv_height) < 100):
+        ###    return
+        self.set_window_size(width=cv_width, height=cv_height)
+        
+        self.display()    
 
 
     def add_race_cars(self, ncar=3):
@@ -331,6 +366,19 @@ class RaceTrack(RoadTrack, BlockMouse):
         
         return road_track.get_entry_at(x=x, y=y, entry_type=entry_type, all=all, margin=margin)
     
+
+
+
+    def get_track_entries(self):
+        """ Get all entries
+        """
+        road_track = self.get_road_track()
+        if road_track is None:
+            return []             # No track yet
+        
+        entries = list(road_track.cars.values())
+        entries.extend(road_track.roads.values())
+        return entries
     
 
     def get_event_block(self, types=None, event=None):
@@ -420,6 +468,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         if self.road_bin is not None:
             self.road_bin.display()
         if self.road_track is not None:
+            if self.get_cv_width() > 1000.:
+                SlTrace.lg("Increased cv_width: %.2f" % self.get_cv_width())
             self.road_track.display()
 
     def is_ctrl_down(self):
@@ -644,7 +694,8 @@ class RaceTrack(RoadTrack, BlockMouse):
                 SlTrace.lg("wait_move_cursor count(%d) exceeded max (%d) exiting" % (ncount, max_count))
                 return
             
-            SlTrace.lg("wait_move_cursor at %s" % [self.move_cursor_x, self.move_cursor_y])
+            SlTrace.lg("wait_move_cursor(%d,%d) at %s"
+                        % (x,y, [self.move_cursor_x, self.move_cursor_y]))
             mw.after(10)
         SlTrace.lg("wait_move_cursor complete at %s" % ([x,y]))
         
@@ -736,7 +787,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         x,y = mouse_info.x_coord, mouse_info.y_coord
         if SlTrace.trace("mouse_click"):
             SlTrace.lg("Clicked road_bin at x=%d y=%d shift_down=%s" % (x,y, self.is_shift_down()))
-        mouse_block = self.get_event_block(types=(RoadStrait,RoadTurn))
+        mouse_block = self.get_event_block(types=(RoadStraight,RoadTurn))
         if mouse_block is not None:
             SlTrace.lg("Clicked block[%s]:%s at x=%d y=%d" % (mouse_block.get_tag_list(), mouse_block, x,y))
             self.save_bin_selection(mouse_block)
@@ -866,6 +917,8 @@ class RaceTrack(RoadTrack, BlockMouse):
                     SlTrace.lg("    back_road: %s" % block.back_road)
                 if hasattr(block, "front_road") and block.front_road is not None:
                     SlTrace.lg("    front_road: %s" % block.front_road)
+
+    
     def mouse3_down_motion (self, event):
         ###cnv.itemconfigure (tk.CURRENT, fill ="blue")
         mouse_info = self.get_info(mouse_no=3, event=event)
@@ -903,9 +956,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         x,y = cnv.canvasx(event.x), cnv.canvasy(event.y)
         ###got = event.widget.coords (tk.CURRENT, x, y)
         SlTrace.lg("up at x=%d y=%d" % (x,y), "motion")
-        '''if self.track_adjustment is not None:
-            self.track_adjustment.remove_markers()
-        '''
         return
 
 
@@ -963,8 +1013,8 @@ class RaceTrack(RoadTrack, BlockMouse):
 
         self.clear_selected(block.id)
         block.display()             # Hack to change tag        
-        if isinstance(block, RoadStrait):
-            track_block = RoadStrait(track,
+        if isinstance(block, RoadStraight):
+            track_block = RoadStraight(track,
                                      rotation=road_rot,
                                      position=track_pos, origin="road_track")
         elif isinstance(block, RoadTurn):
@@ -1020,7 +1070,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         snap.road_groups = []
         for group in self.road_groups:
             snap.road_groups.append(group)
-        snap.track_adjustment = self.track_adjustment    
+        if self.track_adjustment is not None:
+            snap.track_adjustment_block = self.track_adjustment.block
         if save:
             self.snap_shot_undo_stack.append(snap)
         return snap
@@ -1030,7 +1081,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         :snap: snap shot of state
         """
         road_track = self.get_road_track()
-        self.track_adjustment = snap.track_adjustment       # Block ???
         self.key_state = snap.key_state
         self.clear_selected(origin="road_track", display=True)
         self.remove_entry(list(road_track.roads.values()))            
@@ -1051,10 +1101,15 @@ class RaceTrack(RoadTrack, BlockMouse):
         for group in snap.road_groups:
             self.road_groups.append(group)
         self.cur_road_group = snap.cur_road_group
-        self.track_adjustment = snap.track_adjustment
         for road in snap.roads.values():
             road.display()
-            
+        if snap.track_adjustment_block is not None:
+            if self.track_adjustment is not None:
+                self.track_adjustment.remove_markers()
+            self.show_track_adjustments(snap.track_adjustment_block)
+        else:
+            if self.track_adjustment is not None:
+                self.track_adjustment.remove_markers()
             
     def pos_change_control_proc(self, change):
         """ Part position change control processor
@@ -1100,8 +1155,8 @@ class RaceTrack(RoadTrack, BlockMouse):
                     ###sel_block.rotate(180)
                     ###sel_block.display()
                     sel_block.new_arc(-sel_block.get_arc())
-        elif change == "front_add_strait":
-            self.front_add_type(RoadStrait)
+        elif change == "front_add_straight":
+            self.front_add_type(RoadStraight)
         elif change == "front_add_left_turn":
             self.front_add_type(RoadTurn, "left")
         elif change == "front_add_right_turn":
@@ -1110,8 +1165,8 @@ class RaceTrack(RoadTrack, BlockMouse):
             self.front_add_type(CarSimple, "red")
         elif change == "front_add_blue_car":
             self.front_add_type(CarSimple, "blue")
-        elif change == "back_add_strait":
-            self.back_add_type(RoadStrait)
+        elif change == "back_add_straight":
+            self.back_add_type(RoadStraight)
         elif change == "back_add_left_turn":
             self.back_add_type(RoadTurn, "left")
         elif change == "back_add_right_turn":
@@ -1159,13 +1214,22 @@ class RaceTrack(RoadTrack, BlockMouse):
 
     def clear_track_cmd(self):
         SlTrace.lg("clear_track_cmd")
+        self.clear_track_adjustments()
         for car in self.get_cars():
             self.remove_entry(car)
         for road in self.get_roads():
             self.remove_entry(road)
+        """ HACK??? check if any entries left
+        """
+        entries = self.get_track_entries()
+        if entries:
+            SlTrace.lg("\nRemoving %d unexpected entries" % len(entries))
+            for entry in entries:
+                SlTrace.lg("    %s" % entry)
+                self.remove_entry(entry)
+            SlTrace.lg("")
         self.road_groups = []                   # Each group is a dictionary of roads by block id
         self.cur_road_group = None              # Index of current group, else None
-        self.clear_track_adjustments()
         self.key_state = KeyState.ADD_ROAD
         self.races = []
         self.display()
@@ -1197,7 +1261,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         :over_road_ok:  ok to go over other road segment
         """
         front_block = road_block
-        if issubclass(road_type, RoadStrait):
+        if issubclass(road_type, RoadStraight):
             add_pos = front_block.get_front_addon_position(nlengths=2.55)
             if not self.is_pos_in_track(position=add_pos):
                 return False
@@ -1290,7 +1354,7 @@ class RaceTrack(RoadTrack, BlockMouse):
                         
             
     def back_add_type(self, new_type=None, modifier=None):
-        """ Add RoadStrait to back end(back end of selected list) to make a new back end
+        """ Add RoadStraight to back end(back end of selected list) to make a new back end
             TBD: Possibly changed to determine end of physically connected string
         """
         sel_list = self.get_selected_blocks()
@@ -1643,7 +1707,7 @@ class RaceTrack(RoadTrack, BlockMouse):
             d2 = today.strftime("%B %d, %Y")
             print("# On: %s\n" % d2, file=fout)
             print("from homcoord import *", file=fout)
-            print("from road_strait import RoadStrait", file=fout)
+            print("from road_straight import RoadStraight", file=fout)
             print("from road_turn import RoadTurn", file=fout)
             print("from car_simple import CarSimple", file=fout)
             print("from block_commands import *", file=fout)
@@ -1685,7 +1749,7 @@ class RaceTrack(RoadTrack, BlockMouse):
     def car(self, id=None, classtype=None, **kwargs):    
         """ Create road on track, possibly from previously saved road.
             :id: relative block id - actual id will be next suitable id larger than current block id
-            :classtype:  type of road e.g. RoadStrait, RoadTurn
+            :classtype:  type of road e.g. RoadStraight, RoadTurn
             :returns: True iff successful 
         """
         base_id = self.load_track_file_base_id
@@ -1704,7 +1768,7 @@ class RaceTrack(RoadTrack, BlockMouse):
     def road(self, id=None, classtype=None, front_road=None, back_road=None, **kwargs):    
         """ Create road on track, possibly from previously saved road.
             :id: relative block id - actual id will be next suitable id larger than current block id
-            :classtype:  type of road e.g. RoadStrait, RoadTurn
+            :classtype:  type of road e.g. RoadStraight, RoadTurn
             :front_road: link to block in front of this one
             :back_road: link to block in back of this one
             :kwargs: Additional new block creation parameters
@@ -1716,8 +1780,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         if issubclass(classtype, RoadTurn):
             new_block = RoadTurn(track=self, id=id+id_adj, origin="road_track",
                            **kwargs)
-        elif issubclass(classtype, RoadStrait):
-            new_block = RoadStrait(track=self, id=id+id_adj, origin="road_track",
+        elif issubclass(classtype, RoadStraight):
+            new_block = RoadStraight(track=self, id=id+id_adj, origin="road_track",
                            **kwargs)
         else:
             raise SelectError("Unsupported road type %s" % classtype)
@@ -1741,6 +1805,7 @@ if __name__ == "__main__":
 
     SlTrace.setFlags("short_points")
     
+    bin_thick = None        # Use default, Note: 0 ==> no bins
     width = 600     # Window width
     height = width  # Window height
     rotation = None # No rotation
@@ -1749,6 +1814,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     dispall = False      # Display every change
     
+    parser.add_argument('--bin_thick=', '--bt', type=int, dest='bin_thick', default=bin_thick)
     parser.add_argument('--width=', type=int, dest='width', default=width)
     parser.add_argument('--height=', type=int, dest='height', default=height)
     parser.add_argument('--pos_x=', type=float, dest='pos_x', default=pos_x)
@@ -1756,6 +1822,7 @@ if __name__ == "__main__":
     parser.add_argument('--rotation=', type=float, dest='rotation', default=rotation)
     args = parser.parse_args()             # or die "Illegal options"
     
+    bin_thick = args.bin_thick
     width = args.width
     height = args.height
     pos_x = args.pos_x
@@ -1767,9 +1834,9 @@ if __name__ == "__main__":
     
             
     frame = Frame(width=width, height=height, bg="", colormap="new")
-    frame.pack()
+    frame.pack(fill=BOTH, expand=YES)
     canvas = Canvas(frame, width=width, height=height)
-    canvas.pack()   
+    canvas.pack(fill=BOTH, expand=YES)   
     th_width = 1.
     th_height = 1.
     position = None
@@ -1781,9 +1848,30 @@ if __name__ == "__main__":
         position = Pt(pos_x, pos_y)
         
     tR = RaceTrack(canvas=canvas, width=th_width, height=th_height,
+                   bin_thick=bin_thick,
                    position=position,
                    cv_width=width, cv_height=height,
                    rotation=rotation)
-    tR.display()
     
+    """ ISSUE
+        Why does rd.front_add_type(...) give erroneous positioning when
+        rd = RoadStraight(track=tR.road_track, position=Pt(.5,.5))
+        ???
+    """
+    rd0 = RoadStraight(track=tR.road_track, position=Pt(.5,.5))
+    pos_coords = [300,300]
+    rd = tR.add_to_track(rd0,x=pos_coords[0], y=pos_coords[1],
+                            select=False, display=False)
+    tR.add_entry(rd)
+    rd2 = rd.front_add_type(RoadStraight)
+    tR.add_entry(rd2)
+    rd2a = rd2.front_add_type(RoadStraight)
+    tR.add_entry(rd2a)
+    rd3 = rd2a.front_add_type(RoadTurn, modifier="right")
+    tR.add_entry(rd3)
+    rd4 = rd3.front_add_type(RoadStraight)
+    tR.add_entry(rd4)
+    tR.display()
+    tR.enable_window_resize()
+
     mainloop()

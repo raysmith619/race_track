@@ -61,7 +61,7 @@ class PositionWindow(SelectControlWindow):
         add_front_frame = Frame(add_frame)
         add_front_frame.pack(side="top", fill="x", expand=True)
         self.set_fields(add_front_frame, "add", title="Add to Front")
-        self.set_button(field="add", label="Strait", command=self.front_add_strait)
+        self.set_button(field="add", label="Straight", command=self.front_add_straight)
         self.set_button(field="add", label="Left Turn", command=self.front_add_left_turn)
         self.set_button(field="add", label="Right Turn", command=self.front_add_right_turn)
         self.set_button(field="add", label="Red Car", command=self.front_add_red_car)
@@ -71,7 +71,7 @@ class PositionWindow(SelectControlWindow):
             add_back_frame = Frame(add_frame)
             add_back_frame.pack(side="top", fill="x", expand=True)
             self.set_fields(add_back_frame, "add", title="Add to Back")
-            self.set_button(field="add", label="Strait", command=self.back_add_strait)
+            self.set_button(field="add", label="Straight", command=self.back_add_straight)
             self.set_button(field="add", label="Left Turn", command=self.back_add_left_turn)
             self.set_button(field="add", label="Right Turn", command=self.back_add_right_turn)
 
@@ -134,8 +134,8 @@ class PositionWindow(SelectControlWindow):
     def flip_left_right(self):
         self.change_control("flip_left_right")
 
-    def front_add_strait(self):
-        self.change_control("front_add_strait")
+    def front_add_straight(self):
+        self.change_control("front_add_straight")
 
     def front_add_left_turn(self):
         self.change_control("front_add_left_turn")
@@ -149,8 +149,8 @@ class PositionWindow(SelectControlWindow):
     def front_add_blue_car(self):
         self.change_control("front_add_blue_car")
 
-    def back_add_strait(self):
-        self.change_control("back_add_strait")
+    def back_add_straight(self):
+        self.change_control("back_add_straight")
 
     def back_add_left_turn(self):
         self.change_control("back_add_left_turn")

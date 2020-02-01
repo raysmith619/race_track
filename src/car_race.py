@@ -11,7 +11,7 @@ from select_trace import SlTrace
 from select_error import SelectError
 
 from road_turn import RoadTurn
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 
 class CarInfo:
     """
@@ -36,7 +36,6 @@ class CarInfo:
         self.car_turn_speed = car.get_turn_speed()              
         self.car_acc_speed = car.get_acc_speed()
         
-        
     def get_turn_speed(self):
         return self.car_turn_speed 
     
@@ -46,21 +45,23 @@ class CarInfo:
     def get_minimum_speed(self):
         return self.car_minimum_speed
     
-    def faster(self):
+    def faster(self, fract = 1.):
         """ Increase all speed limits
         Let cars catch up
+        :fract: fraction of full speedup default: 1.
         """
-        speed_mult = self.car_race.speed_mult 
+        speed_mult = self.car_race.speed_mult * fract 
         self.car_maximum_speed *= speed_mult
         self.car_minimum_speed *= speed_mult
         self.car_turn_speed *= speed_mult
     
-    def slower(self):
+    def slower(self, fract=1.):
         """ Decrease all speed limits
         Let cars catch up
+        :fract: fraction of slowup default:1.
         """
-        speed_mult = self.car_race.speed_mult 
-        self.car_maximum_speed /= speed_mult
+        speed_mult = self.car_race.speed_mult
+        self.car_maximum_speed  /= speed_mult
         self.car_minimum_speed /= speed_mult
         self.car_turn_speed /= speed_mult
 
@@ -107,6 +108,7 @@ class CarRace:
         self.running = False
         self.pausing = False
         self.speed_mult = 2.            # faster/slower
+        self.mile_per_scf = 1./self.mile2scf(1.)
         
     def add_car_info(self, race, car, road):
         """ Setup car startup info
@@ -136,6 +138,13 @@ class CarRace:
         road_width_feet = race_track.get_road_width_feet()
         scf = dist_mile*5280. * road_width_feet/45. * race_track.get_road_width()
         return scf 
+
+
+    def scf2mile(self, dist_scf):
+        """ Convert screen fraction (i.e. position units) to miles
+        """
+        dist_mile = dist_scf * self.mile_per_scf
+        return dist_mile 
 
 
     def setup_car_info(self, car_info):
@@ -274,10 +283,23 @@ class CarRace:
         if issubclass(type(road), RoadTurn):
             if car_state.speed > car_state.get_turn_speed():
                 car_state.speed = (car_state.get_turn_speed()+car_state.speed)/2
-        elif issubclass(type(road), RoadStrait):
+        elif issubclass(type(road), RoadStraight):
             ###if issubclass(type(road_prev), RoadTurn):
             car_state.speed += random.randint(5,20)*car_state.get_acc_speed(delta_time)  # random burst
             car_state.speed += car_state.get_acc_speed(delta_time)
+
+        """ Competition - if we are close to another car in front of
+        us, we will change to a different lane, if possible,
+        and increase our speed in hopes of passing it.
+        """
+        in_front_state = self.get_car_infront(car_state)
+        if in_front_state is not None:
+            in_front_dist = self.get_distance_diff(car_state, in_front_state)
+            if in_front_dist < 100.:
+                car_state.speed *= 1.2
+                in_front_state.speed *= .8
+                self.get_open(car_state, in_front_state)
+        
         if car_state.speed > car_state.get_maximum_speed():
             car_state.speed = (car_state.get_maximum_speed()+car_state.speed)/2
         if car_state.speed < car_state.get_minimum_speed():
@@ -292,7 +314,34 @@ class CarRace:
         car.display()
         car_state.road_prev = car_state.road_cur
         car_state.road_cur = road_cur
+
+
+    def get_open(self, car_state, in_front_state):
+        """ Change lane to get open, if possible
+        :car_state: our car's state
+        :in_front_state: car in front's state
+        """
+        close = .001
+        car = car_state.car
+        in_front_car = in_front_state.car
+        if abs(car.side_dist-in_front_state.side_dist) < close:
+            left = .05
+            right = .55
+            if abs(car.side_dist - left) < close:
+                SlTrace.lg("%s changing to right lane to pass %s"
+                            % (car, in_front_car))
+                car.side_dist = right
+            else:
+                SlTrace.lg("%s changing to left lane to pass %s"
+                            % (car, in_front_car))
+                car.side_dist = left
+            road, in_road_dist = self.get_road_section(car_state)
+            car_position = road.get_position_at(dist=in_road_dist, side_dist=car.side_dist)        
+            car.set_position(position=car_position)
+            car.display()
+            return
         
+            
     def get_update_interval(self):
         """ update interval in seconds
         """
@@ -306,7 +355,41 @@ class CarRace:
         """ Get our race track
         """
         return self.race_track
+
+
+    def get_car_infront(self, car_state):
+        """ Get the car, closest ahead of us, if any
+        :car_state: this car's state
+        "returns: car_state of closest ahead of us, else None
+        """
+        before_state = None     # Set to closest
+        for car_id, state in self.car_states.items():
+            if car_id == car_state.car.id:
+                continue        # Skip us
+            if state.distance > car_state.distance:
+                if before_state is None or state.distance < before_state.distance:
+                    before_state = state        # New closest
+        return before_state     # closest or None
+    
+    
+    def get_distance_diff(self, our_state, other_state, units='feet'):
+        """  Get distance between our car and other: positive - we lead
+        :our_state: our car_state
+        :other_state: other car's state
+        :units:    Units distance 'mile', 'feet', 'scf' track distance
+        """
+        diff_miles = our_state.distance - other_state.distance
+        if units == 'feet':
+            return diff_miles*5280.
         
+        if units == 'mile':
+            return diff_miles
+        
+        if units == 'scf':
+            return self.mile2scf(diff_miles)
+        
+        raise SelectError("Unrecognized distance unit %s" % units)  
+
         
     def get_road_section(self, car_state):
         """ Get road(section), distance in road section), given car_state

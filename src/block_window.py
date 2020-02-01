@@ -6,7 +6,7 @@ Program Level Menu control
 import os
 from tkinter import *
 from select_trace import SlTrace
-from trace_control import TraceControl
+from trace_control_window import TraceControlWindow
 from psutil._psutil_windows import proc_cmdline
 
 # Here, we are creating our class, Window, and inheriting from the Frame
@@ -88,7 +88,7 @@ class BlockWindow(Frame):
             self.master.title(self.title)
 
         # allowing the widget to take the full space of the root window
-        self.pack(fill=BOTH, expand=1)
+        self.pack(fill=BOTH, expand=YES)
 
         # creating a menu instance
         menubar = Menu(self.master)
@@ -372,11 +372,11 @@ class BlockWindow(Frame):
             self.tc.delete_tc_window()
             self.tc = None
         
-        self.tc = TraceControl(self, change_call=report_change)
+        self.tc = TraceControlWindow(self, change_call=report_change)
 
 
     def tc_destroy(self):
-        """ Called if TraceControl window closes
+        """ Called if TraceControlWindow window closes
         """
         self.tc = None
 
@@ -390,7 +390,7 @@ class BlockWindow(Frame):
 #          Self Test                                                    #
 #########################################################################
 if __name__ == "__main__":
-    from trace_control import TraceControl    
+    from trace_control_window import TraceControlWindow    
         
     # root window created. Here, that would be the only window, but
     # you can later have windows within windows.

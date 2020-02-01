@@ -11,8 +11,10 @@ class BlockMouse:
     """ Mouse operation support
     """
             
-    def __init__(self):
-        """ Setup 
+    def __init__(self, bind_key=True):
+        """ Setup
+        :bind_key: process key press/release
+                default: True - yes
         """
         self.motion_bind_id = None
         self.canvas.bind ("<ButtonPress-1>", self.mouse_down)
@@ -27,8 +29,10 @@ class BlockMouse:
         self.canvas.bind("<B2-Motion>", self.mouse2_down_motion)
         self.canvas.bind("<B3-Motion>", self.mouse3_down_motion)
         self.mw.bind("<Motion>", self.motion)       # For generated events
-        self.mw.bind("<Key>", self.key_down)
-        self.mw.bind("<KeyRelease>", self.key_release)
+        self.bind_key = bind_key
+        if bind_key:
+            self.mw.bind("<Key>", self.key_down)
+            self.mw.bind("<KeyRelease>", self.key_release)
         self.mouse_info = MouseInfo(x_coord=0, y_coord=0)
         self.mouse2_info = MouseInfo(x_coord=0, y_coord=0)
         self.mouse3_info = MouseInfo(x_coord=0, y_coord=0)

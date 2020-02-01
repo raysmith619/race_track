@@ -65,6 +65,13 @@ class CarBlock(BlockBlock):
         new_inst.side_dist = self.side_dist
                 
         return new_inst
+
+
+    def __str__(self):
+        str_str = super().__str__()
+        if hasattr(self, "base_color"):
+            str_str += " base_color:%s" % self.base_color
+        return str_str
         
         
     

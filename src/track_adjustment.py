@@ -9,7 +9,7 @@ from block_arrow import BlockArrow
 from block_cross import BlockCross
 from block_pointer import BlockPointer, AdjChoice
 from road_block import RoadBlock, SurfaceType
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from road_turn import RoadTurn
         
         
@@ -155,8 +155,8 @@ class TrackAdjustment:
         
         if abs(chg_rotation) < ang_close:   # 0 
             self.snap_shot()
-            SlTrace.lg("track_adjust: Adding RoadStrait")
-            if self.add_new_block(RoadStrait):
+            SlTrace.lg("track_adjust: Adding RoadStraight")
+            if self.add_new_block(RoadStraight):
                 return True
         elif abs(chg_rotation-90.) < ang_close:
             self.snap_shot()
@@ -203,7 +203,7 @@ class TrackAdjustment:
         :over_road_ok:  ok to go over other road segment
         """
         race_track = self.race_track
-        self.remove_markers()       # Avoid colliding with markers
+        self.remove_markers(keep_adj=True)       # Avoid colliding with markers
         if not self.road_room_check(self.block, road_type=road_type, modifier=modifier,
                                over_road_ok=over_road_ok):
             return False
@@ -220,7 +220,7 @@ class TrackAdjustment:
             SlTrace.lg("Next block won't fit in track")
             self.race_track.remove_entry(new_block)
             return False
-        self.remove_markers()
+        self.remove_markers(keep_adj=True)
         self.show_track_adjustments(new_block)
         self.race_track.add_to_group(new_block)
         return True 
@@ -273,22 +273,25 @@ class TrackAdjustment:
         return self.race_track.road_room_check(road, road_type=road_type, modifier=modifier,
                                                over_road_ok=over_road_ok)
             
-    def remove_markers(self):
+    def remove_markers(self, keep_adj=False):
         """ Remove adjustment markers' blocks/display
+        :keep_adj: keep main reference
         """
+        race_track = self.race_track
         if self.adj_block is not None:
-            self.adj_block.remove_display_objects()    
-            self.race_track.remove_entry(self.adj_block)
+            ###self.adj_block.remove_display_objects()    
+            race_track.remove_entry(self.adj_block)
             self.adj_block = None
         for block in self.addition_blocks:
-            self.race_track.remove_entry(block)
+            race_track.remove_entry(block)
         self.addition_blocks = []    
         for block in self.shifting_blocks:
-            self.race_track.remove_entry(block)
+            race_track.remove_entry(block)
         self.shifting_blocks = []    
         for block in self.undo_blocks:
-            self.race_track.remove_entry(block)
-
+            race_track.remove_entry(block)
+        if not keep_adj:
+            race_track.track_adjustment = None
 
     def show_track_adjustments(self, block): 
         """ Display distinctly track building control
@@ -330,7 +333,7 @@ class TrackAdjustment:
         :key_state:  new state
         """
         race_track = self.race_track
-        self.remove_markers()
+        self.remove_markers(keep_adj=True)
         block = self.block
         if race_track.key_state == KeyState.EXTEND_ROAD or race_track.key_state == KeyState.ADD_ROAD:
             adj_block = race_track.front_place_type(block, BlockPointer, grouped=False, width=block.get_width(),

@@ -17,7 +17,7 @@ from block_polygon import BlockPolygon
 from block_text import BlockText
 from block_check import BlockCheck
 from road_block import RoadBlock,SurfaceType
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from car_block import CarBlock
 
    
@@ -35,6 +35,7 @@ class RoadTrack(BlockPanel):
                 road_length=.05*2,
                 minimum_speed=5.,
                 maximum_speed=100,
+                bind_key=True,
                 ncar=2,
                 update_interval=.01,
                 turn_speed=5.,
@@ -88,7 +89,7 @@ class RoadTrack(BlockPanel):
     def resize(self, position=None,
                     width=None, height=None):
         self.position = position
-        self.width = self.width
+        self.width = width
         self.height = height
 
 
@@ -172,7 +173,15 @@ class RoadTrack(BlockPanel):
             return self.roads[road_id]
         
         return None
-        
+
+
+    def get_entries(self):
+        """ Get all entries
+        """
+        entries = self.cars.values()
+        entries.extend(self.roads.values())
+        return entries
+    
 
     def get_entry_at(self, x=None, y=None, entry_type=None, all=False, margin=None):
         """ Return car/road at canvas coordinates
@@ -374,18 +383,17 @@ if __name__ == "__main__":
     tR.display()
     SlTrace.lg("After Checkbox")
     tR.display()
-    '''
-
     turn_arc = 90
     rot1 = -10.
     pos1 = Pt(.5, .25)
-    strait_road1 = RoadStrait(tR, tag="first_road",
+    straight_road1 = RoadStraight(tR, tag="first_road",
                              rotation=rot1,
                              position=pos1)
-    tR.add_roads(strait_road1)    
+    tR.add_roads(straight_road1)    
     tR.display()
+    '''
     early_stop = True
-    early_stop = False
+    ###early_stop = False
     if early_stop:
         mainloop()
 
@@ -393,23 +401,23 @@ if __name__ == "__main__":
 
     
     corn_rot1 = rot1
-    corn_pos1 = strait_road1.get_top_left()
+    corn_pos1 = straight_road1.get_top_left()
     turn_road1 = RoadTurn(tR, tag="road_turn1",
                              arc=turn_arc,
                              rotation=corn_rot1,
                              position=corn_pos1)
     tR.add_roads(turn_road1)
         
-    strait_after_turn1 = RoadStrait(tR, tag="after_turn",
+    straight_after_turn1 = RoadStraight(tR, tag="after_turn",
                              rotation=corn_rot1+turn_arc,
                              ###position=turn_road1.get_top_left())
-                             position=strait_road1.get_top_left())      #Hack
-    tR.add_roads(strait_after_turn1)
+                             position=straight_road1.get_top_left())      #Hack
+    tR.add_roads(straight_after_turn1)
     
     extend_rot1 = rot1
-    extend_pos1 = strait_road1.get_relative_point(Pt(0,-1))     # before
-    ###extend_pos1 = strait_road1.get_relative_point(Pt(1,1))      # up to right
-    extend_road1 = RoadStrait(tR, tag="road_extend5",
+    extend_pos1 = straight_road1.get_relative_point(Pt(0,-1))     # before
+    ###extend_pos1 = straight_road1.get_relative_point(Pt(1,1))      # up to right
+    extend_road1 = RoadStraight(tR, tag="road_extend5",
                              rotation=extend_rot1,
                              position=extend_pos1)
     tR.add_roads(extend_road1)
@@ -450,14 +458,14 @@ if __name__ == "__main__":
 
     rot2 = 30.
     pos2 = Pt(.1, .2)
-    strait_road2 = RoadStrait(tR, tag="second_road",
+    straight_road2 = RoadStraight(tR, tag="second_road",
                              rotation=rot2,
                              position=pos2)
-    tR.add_roads(strait_road2)    
+    tR.add_roads(straight_road2)    
     if dispall: tR.display()
     
     corn_rot2 = rot2
-    corn_pos2 = strait_road2.get_top_left()
+    corn_pos2 = straight_road2.get_top_left()
     turn_road2 = RoadTurn(tR, tag="road_turn",
                              arc=turn_arc,
                              rotation=corn_rot2,
@@ -466,8 +474,8 @@ if __name__ == "__main__":
     if dispall: tR.display()
     
     extend_rot2 = rot2
-    extend_pos2 = strait_road2.get_relative_point(Pt(0,-1))     # before
-    extend_road2 = RoadStrait(tR, tag="road_extend2",
+    extend_pos2 = straight_road2.get_relative_point(Pt(0,-1))     # before
+    extend_road2 = RoadStraight(tR, tag="road_extend2",
                              rotation=extend_rot2,
                              position=extend_pos2)
     tR.add_roads(extend_road2)    
@@ -476,14 +484,14 @@ if __name__ == "__main__":
     
     rot3 = 90.
     pos3 = Pt(.75, .75)
-    strait_road3 = RoadStrait(tR, tag="road3",
+    straight_road3 = RoadStraight(tR, tag="road3",
                              rotation=rot3,
                              position=pos3)
-    tR.add_roads(strait_road3)    
+    tR.add_roads(straight_road3)    
     if dispall: tR.display()
     
     corn_rot3 = rot3
-    corn_pos3 = strait_road3.get_relative_point(Pt(0,1))
+    corn_pos3 = straight_road3.get_relative_point(Pt(0,1))
     turn_road3 = RoadTurn(tR, tag="road_turn",
                              arc=turn_arc,
                              rotation=corn_rot3,
@@ -492,8 +500,8 @@ if __name__ == "__main__":
     if dispall:  tR.display()
     
     extend_rot3 = rot3
-    extend_pos3 = strait_road3.get_relative_point(Pt(0,-1))     # before
-    extend_road3 = RoadStrait(tR, tag="road_extend3",
+    extend_pos3 = straight_road3.get_relative_point(Pt(0,-1))     # before
+    extend_road3 = RoadStraight(tR, tag="road_extend3",
                              rotation=extend_rot3,
                              position=extend_pos3)
     tR.add_roads(extend_road3)    
@@ -502,14 +510,14 @@ if __name__ == "__main__":
     
     rot4 = 135.
     pos4 = Pt(.25, .75)
-    strait_road4 = RoadStrait(tR, tag="road4",
+    straight_road4 = RoadStraight(tR, tag="road4",
                              rotation=rot4,
                              position=pos4)
-    tR.add_roads(strait_road4)    
+    tR.add_roads(straight_road4)    
     if dispall:  tR.display()
     
     corn_rot4 = rot4
-    corn_pos4 = strait_road4.get_top_left()
+    corn_pos4 = straight_road4.get_top_left()
     turn_road5 = RoadTurn(tR, tag="road_turn4",
                              arc=turn_arc,
                              rotation=corn_rot4,
@@ -518,8 +526,8 @@ if __name__ == "__main__":
     if dispall:  tR.display()
     
     extend_rot4 = rot4
-    extend_pos4 = strait_road4.get_relative_point(Pt(0,-1))     # before
-    extend_road4 = RoadStrait(tR, tag="road_extend4",
+    extend_pos4 = straight_road4.get_relative_point(Pt(0,-1))     # before
+    extend_road4 = RoadStraight(tR, tag="road_extend4",
                              rotation=extend_rot4,
                              position=extend_pos4)
     tR.add_roads(extend_road4)    
@@ -528,14 +536,14 @@ if __name__ == "__main__":
     
     rot5 = 30.
     pos5 = Pt(.5, .5)
-    strait_road5 = RoadStrait(tR, tag="road5",
+    straight_road5 = RoadStraight(tR, tag="road5",
                             rotation=rot5,
                             position=pos5)
-    tR.add_roads(strait_road5)    
+    tR.add_roads(straight_road5)    
     if dispall: tR.display()
     
     corn_rot5 = rot5
-    corn_pos5 = strait_road5.get_top_left()
+    corn_pos5 = straight_road5.get_top_left()
     turn_road5 = RoadTurn(tR, tag="road_turn5",
                              arc=turn_arc,
                              rotation=corn_rot5,
@@ -544,8 +552,8 @@ if __name__ == "__main__":
     if dispall: tR.display()
     
     extend_rot5 = rot5
-    extend_pos5 = strait_road5.get_relative_point(Pt(0,-1))     # before
-    extend_road5 = RoadStrait(tR, tag="road_extend5",
+    extend_pos5 = straight_road5.get_relative_point(Pt(0,-1))     # before
+    extend_road5 = RoadStraight(tR, tag="road_extend5",
                              rotation=extend_rot5,
                              position=extend_pos5)
     tR.add_roads(extend_road5)    

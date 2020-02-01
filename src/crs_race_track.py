@@ -18,7 +18,7 @@ from block_panel import BlockPanel
 from block_block import BlockBlock,BlockType
 from block_polygon import BlockPolygon
 from road_block import RoadBlock,SurfaceType
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from race_track import RaceTrack
 from road_bin_setup import RoadBinSetup
 from car_bin_setup import CarBinSetup
@@ -50,7 +50,9 @@ track_file = r'..\crsrc\double_circled.crsrc'
 starter_track = True
 ###starter_track = False
 update_interval = .02
+bind_key = True             # Key binding enabled default: True
 race_track_src_dir = "../crsrc"  # Race track source directory
+parser.add_argument('--bind_key', '-bk', type=bool, dest='bind_key', default=starter_track)
 parser.add_argument('--width=', type=int, dest='width', default=width)
 parser.add_argument('--height=', type=int, dest='height', default=height)
 parser.add_argument('--maximum_speed=', '-mas', type=float, dest='maximum_speed', default=maximum_speed)
@@ -65,6 +67,7 @@ parser.add_argument('--starter_track', '-st', type=bool, dest='starter_track', d
 parser.add_argument('--update_interval', '-ui', type=float, dest='update_interval', default=update_interval)
 args = parser.parse_args()             # or die "Illegal options"
 
+bind_key = args.bind_key
 width = args.width
 height = args.height
 pos_x = args.pos_x
@@ -106,9 +109,9 @@ app = BlockWindow(master=mw,
                 game_control=None
                 )
 frame = Frame(app, width=width, height=height, bg="", colormap="new")
-frame.pack()
+frame.pack(fill=BOTH, expand=YES)
 canvas = Canvas(frame, width=width, height=height)
-canvas.pack()
+canvas.pack(fill=BOTH, expand=YES)
 BlockBlock.set_canvas(canvas)           # Set for auxiliary routines, e.g., mkpoint
 th_width = 1.
 th_height = 1.
@@ -122,6 +125,7 @@ if pos_x is not None or pos_y is not None:
 
 tR = RaceTrack(mw=mw, canvas=canvas, width=th_width, height=th_height,
                position=position,
+               bind_key=bind_key,
                cv_width=width, cv_height=height,
                rotation=rotation,
                maximum_speed=maximum_speed,
@@ -148,6 +152,7 @@ if starter_track:
     road_track = tR.get_road_track()
     RoadTrackSetup(road_track, race_track_file=track_file)
     tR.set_reset()
+
 
 
 def save_track_proc():
@@ -188,6 +193,7 @@ def load_track_proc():
 
 
 app.set_file_load_proc(load_track_proc)
+tR.enable_window_resize()
 
 ###RoadBinSetup(road_track)
 tR.display()

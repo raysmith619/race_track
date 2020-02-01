@@ -16,7 +16,7 @@ from block_text import BlockText
 
 class RoadType(Enum):
     COMPOSITE = 1
-    STRAIT = 2
+    STRAIGHT = 2
     TURN = 3
     CROSS = 4
 
@@ -228,8 +228,8 @@ class RoadBlock(BlockBlock):
         """
         return 10           #MPH
     
-    def get_strait_acc(self):
-        """ Get acceleration on strait away
+    def get_straight_acc(self):
+        """ Get acceleration on straight away
         """
         return 10
 

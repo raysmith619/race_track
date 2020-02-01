@@ -8,6 +8,7 @@ from select_trace import SlTrace
 from select_error import SelectError
 
 from block_block import BlockBlock,BlockType,tran2matrix
+from block_pointer import AdjChoice
 from block_polygon import BlockPolygon
 
 
@@ -47,30 +48,43 @@ class BlockCross(BlockPolygon):
         if container is None:
             raise SelectError("BlockArrow is missing required container parameter")
         self.modifier = modifier        # Save for checking
-        lx = 0.    # left point
-        rx = 1.     # Right point
-        mx = .5     # Middle x
-        ty = 1.
-        mly = .4    # middle lower y
-        muy = .6    # middle upper y
-        blx = .4
-        brx = .6    # right x base
-        by = 0.
-        points = [Pt(blx,by), Pt(blx,mly),   # Left base vertical
-                  Pt(lx, mly),                # left cross lower
-                  Pt(lx, muy),               # left cross vertical
-                  Pt(blx, muy),               # left cross upper
-                  Pt(blx, ty),                # left middle vertical
-                  Pt(brx, ty),                # top cross
-                  Pt(brx, muy),               # right upper vertical
-                  Pt(rx, muy),                # right cross
-                  Pt(rx, mly),                # right cross vertical
-                  Pt(brx, mly),               # right lower cross
-                  Pt(brx, by)]               # right lower vertical
+        self.lx = lx = 0.    # left point
+        self.rx = rx = 1.     # Right point
+        self.mx = mx = .5     # Middle x
+        self.ty = ty = 1.
+        self.mly = mly = .4    # middle lower y
+        self.muy = muy = .6    # middle upper y
+        self.blx = blx = .4
+        self.brx = brx = .6    # right x base
+        self.by = by = 0.
+        points = [Pt(self.blx,by), Pt(self.blx,mly),   # Left base vertical
+                  Pt(self.lx, self.mly),                # left cross lower
+                  Pt(self.lx, self.muy),               # left cross vertical
+                  Pt(self.blx, self.muy),               # left cross upper
+                  Pt(self.blx, self.ty),                # left middle vertical
+                  Pt(self.brx, self.ty),                # top cross
+                  Pt(self.brx, self.muy),               # right upper vertical
+                  Pt(self.rx, self.muy),                # right cross
+                  Pt(self.rx, self.mly),                # right cross vertical
+                  Pt(self.brx, self.mly),               # right lower cross
+                  Pt(self.brx, self.by)]               # right lower vertical
 
         xkwargs = {'outline' : True,
                    'width' : 3}                
         super().__init__(points=points, container=container, **kwargs)
+    
+    
+    def get_adj_coords(self, choice=AdjChoice.FORWARD):
+        """ Return cursor coordinates to place for choice
+        :choice: adjustment choice
+        """
+        if choice == AdjChoice.FORWARD:
+            ip = Pt(self.mx, (self.muy+self.ty)/2)
+        else:
+            raise SelectError("Unexpected get_adj_coords choice: %s" % choice)
+        coords = self.get_coords(ip)
+        return coords
+    
 
 
     def get_modifier(self):

@@ -14,7 +14,7 @@ from block_arc import BlockArc
    
 class CarSimple(CarBlock):
     """
-    A Strait Part of a road 
+    A Straight Part of a road 
     which can be used to construct a road layout
     """
     

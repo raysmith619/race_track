@@ -1118,7 +1118,8 @@ class BlockBlock:
                
     def base_xtran(self):
         """ Create this component's contribution
-        to the translation:
+        to the translation.  If at top (container is None), use cv_width, cv_height
+        
         Use local coordinate frame
             v' = M x v = R x T x S x v
         Result:
@@ -1126,12 +1127,16 @@ class BlockBlock:
             self.xtran == translation for this component (before sub parts such as points)
         """
         SlTrace.lg("\nbase_xtran: %s" % self, "base_xtran")
-        width = self.width
-        if width is None:
-            width = 1.
-        height = self.height
-        if height is None:
-            height = 1.
+        if self.container is None:
+            width = self.cv_width
+            height = self.cv_height
+        else:
+            width = self.width
+            if width is None:
+                width = 1.
+            height = self.height
+            if height is None:
+                height = 1.
         position = self.position
         rotation = self.rotation
         if rotation is None:
@@ -1341,18 +1346,18 @@ class BlockBlock:
     def new_type(self, new_type=None, modifier=None, **kwargs):
         """ Create a new object of type "new_type" using all relevant
         characteristics of this block
-        :new_type: type of new object (RoadTurn, RoadStrait currently supported)
+        :new_type: type of new object (RoadTurn, RoadStraight currently supported)
         :modifier: type modifier e.g. "left", "right"
         """
-        from road_strait import RoadStrait
+        from road_straight import RoadStraight
         from road_turn import RoadTurn
         from car_simple import CarSimple
         from block_arrow import BlockArrow
         from block_cross import BlockCross
         from block_pointer import BlockPointer
         track = self.get_road_track()
-        if new_type == RoadStrait:    # TFD
-            new_block = RoadStrait(track,
+        if new_type == RoadStraight:    # TFD
+            new_block = RoadStraight(track,
                                     position=self.position,
                                     rotation=self.rotation,
                                     origin="road_track", **kwargs)

@@ -7,9 +7,9 @@ from select_trace import SlTrace
 from select_error import SelectError
 
 
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from road_turn import RoadTurn
-from road_strait import RoadStrait
+from road_straight import RoadStraight
 from road_turn import RoadTurn
 
 
@@ -30,7 +30,7 @@ class RoadBinSetup:
         entry_height = 1.-2*entry_space       # height of entry
         pos_inc = Pt(entry_space+entry_width, 0.)    # to next entry
         pos = Pt(entry_space, entry_space)  # HACK - Add extra  to move to right
-        entry = RoadStrait(self.road_bin,
+        entry = RoadStraight(self.road_bin,
                                  rotation=road_rot,
                                  position=pos,
                                  width=entry_width,
