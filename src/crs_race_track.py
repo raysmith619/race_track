@@ -1,10 +1,12 @@
-# race_track.py        
+# crs_race_track.py        
 """
 Basis of a race track
 Includes RoadTrack with road and car bins
 """
 import os
 import sys
+import re
+
 from tkinter import *    
 from tkinter import filedialog
 import argparse
@@ -28,6 +30,10 @@ from road_turn import RoadTurn
 from block_arc import BlockArc
 from position_window import PositionWindow
 from race_control_window import RaceControlWindow
+
+src_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(src_dir)
+SlTrace.lg(f"Using work directory:{src_dir}")
 
 SlTrace.setFlags("short_points,starter_track,down"
                  + ",front_road"

@@ -3,6 +3,8 @@
 Contain, track, and control race operation
 """
 import time
+time.clock = time.time
+
 import random
 
 from homcoord import *
