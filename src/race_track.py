@@ -115,7 +115,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         self.move_cursor_x = 0
         self.move_cursor_y = 0
         
-        ###BlockMouse.__init__(self)
+        BlockMouse.__init__(self)
         # Calculate bin dimensions, as fractions of canvas
         # Attempt to give fixed bin thickness
         bin_offset = 2.         # Offset from edge
@@ -1863,15 +1863,21 @@ if __name__ == "__main__":
     rd = tR.add_to_track(rd0,x=pos_coords[0], y=pos_coords[1],
                             select=False, display=False)
     tR.add_entry(rd)
+    tR.display()
     rd2 = rd.front_add_type(RoadStraight)
     tR.add_entry(rd2)
+    tR.display()
     rd2a = rd2.front_add_type(RoadStraight)
     tR.add_entry(rd2a)
+    tR.display()
     rd3 = rd2a.front_add_type(RoadTurn, modifier="right")
     tR.add_entry(rd3)
+    tR.display()
     rd4 = rd3.front_add_type(RoadStraight)
+    tR.display()
     tR.add_entry(rd4)
     tR.display()
     tR.enable_window_resize()
+    tR.display()
 
     mainloop()
