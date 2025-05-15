@@ -7,7 +7,6 @@ from datetime import date
 import winsound
 from tkinter import *
 from homcoord import *
-import copy
 
 from select_trace import SlTrace
 from select_error import SelectError
@@ -75,22 +74,24 @@ class RaceTrack(RoadTrack, BlockMouse):
     """
             
     def __init__(self,
+                race_way,
                 mw=None,
                 bin_thick=50,           # Bin thickness in pixels, 0 => no bins
                 **kwargs
                 ):
         """ Setup track plus bin
+        :race_way: link to over race way, including
+                    track Do/Undo support storage
         :bin_thick: bin thickness, in_pixels 0 => no bins
         :update_interval: display update interval (sec)
         if container is None:
             set width, height to pixel(absolute)
         """
+        self.race_way = race_way
         if bin_thick is None:       # None doesn't evaluate to default
             bin_thick = 50
         self.bin_thick = bin_thick
         self.track_adjustment = None    # When set, control track adjustment by mouse positioning
-        self.snap_shot_undo_stack = []
-        self.snap_shot_redo_stack = []
         if mw is None:
             mw = Tk()
         self.mw = mw
@@ -120,7 +121,11 @@ class RaceTrack(RoadTrack, BlockMouse):
         # Attempt to give fixed bin thickness
         bin_offset = 2.         # Offset from edge
         cv_height = self.get_cv_length()
+        if cv_height is None:
+            cv_height = 100
         cv_width = self.get_cv_width()
+        if cv_width is None:
+            cv_width = 200
         self.set_window_size(width=cv_width, height=cv_height,
                            bin_offset=bin_offset)
         self.set_reset()        # Set reset state - can be changed
@@ -134,8 +139,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         :height: canvas height in pixels
         :bin_offset: bin offset, from edge, in pixels
         """
-        cv_width = self.cv_width = width
-        cv_height = self.cv_height = height
+        self.width = cv_width = self.cv_width = width
+        self.height = cv_height = self.cv_height = height
         bin_thick = self.bin_thick
         SlTrace.lg("RaceTrack: width=%.1f height=%.1f position=%s cv_width=%.1f cv_height=%.1f"
            % (self.width, self.height, self.position, cv_width, cv_height))
@@ -1048,68 +1053,21 @@ class RaceTrack(RoadTrack, BlockMouse):
 
 
     def snap_shot(self, save=True):
-        """ snap shot of race_track state to
-        shallow info only just delete, select info preserved
-        restrict to origin == "road_track"
+        """ snap shot of race_track state
         implement simple do/undo
         :save: if True, save snap shot on undo stack
         :returns: snap shot of state
         """
-        snap = SnapShot()
-        snap.key_state = self.key_state
-        road_track = self.get_road_track()
-        for road in road_track.roads.values():
-            snap.roads[road.id] = road.dup(keep_id=True)
-        for car in road_track.cars.values():
-            snap.cars[car.id] = car.dup(keep_id=True)
-        # restore from list
-        for selected in self.get_selected(origin="road_track"):
-            if selected.block.origin == "road_track":
-                snap.selects_list.append(copy.deepcopy(selected))
-        snap.cur_road_group = self.cur_road_group
-        snap.road_groups = []
-        for group in self.road_groups:
-            snap.road_groups.append(group)
-        if self.track_adjustment is not None:
-            snap.track_adjustment_block = self.track_adjustment.block
-        if save:
-            self.snap_shot_undo_stack.append(snap)
+        if self.race_way is not None:
+            snap = self.race_way.snap_shot(save=save)
         return snap
         
     def snap_shot_restore(self, snap):
         """ Restore state from snap shot
         :snap: snap shot of state
         """
-        road_track = self.get_road_track()
-        self.key_state = snap.key_state
-        self.clear_selected(origin="road_track", display=True)
-        self.remove_entry(list(road_track.roads.values()))            
-        self.remove_entry(list(road_track.cars.values()))            
-        self.add_entry(list(snap.roads.values()))
-        self.add_entry(list(snap.cars.values()))
-        id_list = []
-        for selects in snap.selects_list:
-            id_list.append(selects.block.id)
-        if SlTrace.trace("snap_shot"):
-            SlTrace.lg("snap_shot_restore selects_list len: %d, %s" %
-                        (len(snap.selects_list), id_list))
-        for selected in snap.selects_list:
-            self.set_selected(selected.block.id, x_coord=selected.x_coord, y_coord=selected.y_coord,
-                              x_coord_prev=selected.x_coord_prev, y_coord_prev=selected.y_coord_prev,
-                              keep_old=True)
-        self.road_groups = []
-        for group in snap.road_groups:
-            self.road_groups.append(group)
-        self.cur_road_group = snap.cur_road_group
-        for road in snap.roads.values():
-            road.display()
-        if snap.track_adjustment_block is not None:
-            if self.track_adjustment is not None:
-                self.track_adjustment.remove_markers()
-            self.show_track_adjustments(snap.track_adjustment_block)
-        else:
-            if self.track_adjustment is not None:
-                self.track_adjustment.remove_markers()
+        if self.race_way is not None:
+            self.race_way.snap_shot_restore(snap)
             
     def pos_change_control_proc(self, change):
         """ Part position change control processor
@@ -1303,25 +1261,22 @@ class RaceTrack(RoadTrack, BlockMouse):
 
 
     def undo_cmd(self):
-        SlTrace.lg("undo_cmd")
-        if not self.snap_shot_undo_stack:
-            SlTrace.lg("Can't undo")
+        if not hasattr(self, "race_way"):
+            SlTrace.lg(f"RaceTrack has no attr 'race_way'")
             return False
-        redo_snap = self.snap_shot(save=False)   # save for redo
-        snap = self.snap_shot_undo_stack.pop()
-        self.snap_shot_restore(snap)
-        self.snap_shot_redo_stack.append(redo_snap)
-        return True
+        
+        if self.race_way is None:
+            SlTrace.lg(f"RaceTrack has None 'race_way'")
+            return False
+        
+        res = self.race_way.undo_cmd()
+        self.display()
+        return res
 
     def redo_cmd(self):
-        SlTrace.lg("redo_cmd")
-        if not self.snap_shot_redo_stack:
-            SlTrace.lg("Can't redo")
-            return False
-        self.snap_shot()        # So subsequent undo will undo this redo
-        snap = self.snap_shot_redo_stack.pop()
-        self.snap_shot_restore(snap)
-        return True
+        res = self.race_way.redo_cmd()
+        self.display()
+        return res
     
     def remove_entry(self, entries):
         """ Delete cars/roads from race_track
@@ -1799,6 +1754,7 @@ if __name__ == "__main__":
     from tkinter import *    
     import argparse
     
+    from race_way import RaceWay
     from road_block import RoadBlock
     from road_turn import RoadTurn
     from block_arc import BlockArc
@@ -1846,8 +1802,10 @@ if __name__ == "__main__":
         if pos_y is None:
             pos_y = 0.
         position = Pt(pos_x, pos_y)
-        
-    tR = RaceTrack(canvas=canvas, width=th_width, height=th_height,
+    
+    race_way = RaceWay()    
+    tR = RaceTrack(race_way, canvas=canvas, width=th_width,
+                   height=th_height,
                    bin_thick=bin_thick,
                    position=position,
                    cv_width=width, cv_height=height,

@@ -21,7 +21,7 @@ from block_block import BlockBlock,BlockType
 from block_polygon import BlockPolygon
 from road_block import RoadBlock,SurfaceType
 from road_straight import RoadStraight
-from race_track import RaceTrack
+from race_way import RaceWay
 from road_bin_setup import RoadBinSetup
 from car_bin_setup import CarBinSetup
 from road_track_setup import RoadTrackSetup
@@ -54,7 +54,7 @@ parser = argparse.ArgumentParser()
 dispall = False      # Display every change
 track_file = r'..\crsrc\double_circled.crsrc'
 starter_track = True
-###starter_track = False
+starter_track = False
 update_interval = .02
 bind_key = True             # Key binding enabled default: True
 race_track_src_dir = "../crsrc"  # Race track source directory
@@ -129,7 +129,7 @@ if pos_x is not None or pos_y is not None:
         pos_y = 0.
     position = Pt(pos_x, pos_y)
 
-tR = RaceTrack(mw=mw, canvas=canvas, width=th_width, height=th_height,
+tR = RaceWay(mw=mw, canvas=canvas, width=th_width, height=th_height,
                position=position,
                bind_key=bind_key,
                cv_width=width, cv_height=height,

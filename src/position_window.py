@@ -3,6 +3,7 @@
 Window control for part positioning / arrangement
 """
 from tkinter import *
+import pyautogui
 
 from select_trace import SlTrace
 from select_error import SelectError
@@ -180,28 +181,54 @@ class PositionWindow(SelectControlWindow):
         return res
 
     def set(self):
+        self.record_loc()
         self.set_vals()
         res = self.change_control("set_track")
+        self.restore_loc()
         return res
 
     
     def reset(self):
+        self.record_loc()
         self.set_vals()
         res = self.change_control("reset_track")
+        self.restore_loc()
         return res
 
     
     def undo(self):
+        self.record_loc()
         self.set_vals()
         res = self.change_control("undo_cmd")
+        self.restore_loc()
         return res
 
     
     def redo(self):
+        self.record_loc()
         self.set_vals()
         res = self.change_control("redo_cmd")
+        self.restore_loc()
         return res
 
+
+    def record_loc(self):
+        """ Record current location, e.g. on top
+        of Undo button, so we can restore our
+        location, via restore_loc, after action.
+        """
+        self.current_mouse_position = pyautogui.position()
+    
+
+    def restore_loc(self):
+        """ restore location, e.g. on top
+        of Undo button, asof record_loc call.
+        """
+        pyautogui.moveTo(self.current_mouse_position)
+        
+        
+
+        
 
     
 if __name__ == '__main__':
