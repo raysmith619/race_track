@@ -1,6 +1,6 @@
 # road_straight.py        
 """
-Strait road segment
+Straight road segment
 """
 from homcoord import *
 
@@ -12,9 +12,9 @@ from block_block import BlockBlock,BlockType
 from block_polygon import BlockPolygon
 from road_block import RoadBlock,RoadType
    
-class RoadStrait(RoadBlock):
+class RoadStraight(RoadBlock):
     """
-    A Strait Part of a road 
+    A Straight Part of a road 
     which can be used to construct a road layout
     """
     
@@ -24,7 +24,7 @@ class RoadStrait(RoadBlock):
                 **kwargs):
         """ Setup Road object
          """
-        super().__init__(track, road_type=RoadType.STRAIT, **kwargs)
+        super().__init__(track, road_type=RoadType.STRAIGHT, **kwargs)
         if self.width is None:
             self.width = self.get_road_width()
         if self.height is None:
