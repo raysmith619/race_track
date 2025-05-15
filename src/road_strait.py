@@ -1,4 +1,4 @@
-# road_strait.py        
+# road_straight.py        
 """
 Strait road segment
 """
@@ -32,12 +32,12 @@ class RoadStrait(RoadBlock):
         xkwargs = self.xkwargs
         if xkwargs is None:
             xkwargs = {'fill' : 'black'}
-        strait = BlockPolygon(container=self,
+        straight = BlockPolygon(container=self,
                             tag=self.tag,
                             position=Pt(0,0),
                             points=[Pt(0,0), Pt(0,1), Pt(1,1), Pt(1,0)],
                             xkwargs=xkwargs)
-        self.comps.append(strait)
+        self.comps.append(straight)
         median_width = self.median_width
         median_x = self.median_x
         off_edge = self.off_edge

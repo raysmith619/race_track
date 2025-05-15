@@ -299,7 +299,7 @@ class TrackAdjustment:
         the existing selected block.
         The operations are:
           1. Mouse down motion in the direction of the block
-          will create a new strait block at the head of the
+          will create a new straight block at the head of the
           selected block when the motion is a sizable fraction of the
           block's length
              a. new block will be created
