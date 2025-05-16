@@ -7,7 +7,7 @@ import os
 import sys
 import re
 
-from tkinter import *    
+import tkinter as tk    
 from tkinter import filedialog
 import argparse
 from homcoord import *
@@ -105,7 +105,7 @@ def play_exit():
     pgm_exit()
 
 
-mw = Tk()        
+mw = tk.Tk()        
 app = BlockWindow(master=mw,
                 title="My Race Track",
                 pgmExit=play_exit,
@@ -114,10 +114,10 @@ app = BlockWindow(master=mw,
                 arrange_selection=False,
                 game_control=None
                 )
-frame = Frame(app, width=width, height=height, bg="", colormap="new")
-frame.pack(fill=BOTH, expand=YES)
-canvas = Canvas(frame, width=width, height=height)
-canvas.pack(fill=BOTH, expand=YES)
+frame = tk.Frame(app, width=width, height=height, bg="", colormap="new")
+frame.pack(fill=tk.BOTH, expand=tk.YES)
+canvas = tk.Canvas(frame, width=width, height=height)
+canvas.pack(fill=tk.BOTH, expand=tk.YES)
 BlockBlock.set_canvas(canvas)           # Set for auxiliary routines, e.g., mkpoint
 th_width = 1.
 th_height = 1.
@@ -165,7 +165,7 @@ def save_track_proc():
     """ Save current track state
     """
     SlTrace.lg("save_track_proc")
-    filename =  filedialog.asksaveasfilename(
+    filename =  tk.filedialog.asksaveasfilename(
         initialdir = "../crsrc",
         title = "Track Files",
         filetypes = (("track files","*.crsrc"),
@@ -205,4 +205,4 @@ tR.enable_window_resize()
 tR.display()
 
 
-mainloop()
+tk.mainloop()

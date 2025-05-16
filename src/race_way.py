@@ -135,6 +135,11 @@ class RaceWay(BlockBlock):
 
     def get_road_bin(self):
         return self.race_track.get_road_bin()
+            
+    def load_track_file(self, file_name):
+        """ Load track file
+        """
+        self.race_track.load_track_file(file_name)
 
     def save_bin_selection(self, block):
         """ Save selection to drive next car track click - add duplicate to track

@@ -4,14 +4,18 @@ Program Level Menu control
  From BlockWindow(select_window)
 """
 import os
-from tkinter import *
+import sys
+import tkinter as tk
+import textwrap
+
 from select_trace import SlTrace
 from trace_control_window import TraceControlWindow
 from psutil._psutil_windows import proc_cmdline
+from scrolled_text_info import ScrolledTextInfo
 
 # Here, we are creating our class, Window, and inheriting from the Frame
 # class. Frame is a class from the tkinter module. (see Lib/tkinter/__init__)
-class BlockWindow(Frame):
+class BlockWindow(tk.Frame):
     CONTROL_NAME_PREFIX = "play_control"
 
     def __deepcopy__(self, memo=None):
@@ -41,7 +45,7 @@ class BlockWindow(Frame):
                         default: True
         """
         # parameters that you want to send through the Frame class. 
-        Frame.__init__(self, master)   
+        tk.Frame.__init__(self, master)   
 
         #reference to the master widget, which is the tk window                 
         self.title = title
@@ -88,15 +92,15 @@ class BlockWindow(Frame):
             self.master.title(self.title)
 
         # allowing the widget to take the full space of the root window
-        self.pack(fill=BOTH, expand=YES)
+        self.pack(fill=tk.BOTH, expand=tk.YES)
 
         # creating a menu instance
-        menubar = Menu(self.master)
+        menubar = tk.Menu(self.master)
         self.menubar = menubar      # Save for future reference
         self.master.config(menu=menubar)
 
         # create the file object)
-        filemenu = Menu(menubar, tearoff=0)
+        filemenu = tk.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Load", command=self.File_Load)
         filemenu.add_command(label="Save", command=self.File_Save)
         filemenu.add_separator()
@@ -107,16 +111,20 @@ class BlockWindow(Frame):
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.pgmExit)
         menubar.add_cascade(label="File", menu=filemenu)
-
-                                # Arrange control - optoinal
-        if self.arrange_selection:
-            menubar.add_command(label="Arrange",
-                                 command=self.arrange_control)
-
+        
                                 # Trace control
+        menubar.add_cascade(label=" "*5)
         menubar.add_command(label="Trace", command=self.trace_control)
         self.arrange_windows()
         self.master.bind( '<Configure>', self.win_size_event)
+
+        # create Help object
+        menubar.add_cascade(label=" "*50)
+        helpmenu = tk.Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="General", command=self.Help_General)
+        helpmenu.add_command(label="Keys", command=self.Help_Keys)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+
 
 
     def get_game_control(self):
@@ -265,7 +273,71 @@ class BlockWindow(Frame):
             self.select_trace()
         self.tc.select_none()
 
+    def Help_General(self):
+        """ General help on games
+        """
+        title = "General Help"
+        help_text = """
+        This program facilitates the creation of simple
+        two-dimentional race tracks, each supporting
+        the racing of a number of two-dimentional cars.
         
+        The racing is very simple.  The fun, so far, is
+        the creation of various closed path tracks and
+        the placement of an arbitrary number of cars on
+        each.
+        
+        The mouse can select a road track from the bin
+        below.  Then click the desired position on the
+        green track area.
+        
+        The Position Parts window supports modifying
+        the the road part on the track.
+        """
+        # Place help window to right, bottom of our window
+        w_x = self.master.winfo_x()
+        w_y = self.master.winfo_y()
+        w_h = self.master.winfo_height()
+        w_w = self.master.winfo_width()
+        wt_x = w_x + w_w
+        wt_y = w_y + w_h
+        htext = textwrap.dedent(help_text)
+        sti = ScrolledTextInfo(title= title,
+                      text=htext,
+                      xpos=wt_x, ypos=wt_y)
+
+    def Help_Keys(self):
+        """ Help on keyboard contorls
+        """
+        title = "Help on keyboard controls"
+        help_text = """
+        Add next block, extending track if possible,
+        else removing last block added:
+            Up, Right, Down, Left - extend track in
+            that direction, if current direction,
+            or new direction.  If direction key
+            is backwards, towards the current track,
+            remove the current track block.  This
+            shortens the track.
+            Key presses can be repeated to aid
+            creating the track.
+
+        """
+        htext = textwrap.dedent(help_text)
+        # Place help window to right, bottom of our window
+        x_disp = 100
+        y_disp = 100
+        w_x = self.master.winfo_x()
+        w_y = self.master.winfo_y()
+        w_h = self.master.winfo_height()
+        w_w = self.master.winfo_width()
+        wt_x = w_x + w_w + x_disp
+        wt_y = w_y + w_h + y_disp
+        htext = textwrap.dedent(help_text)
+        sti = ScrolledTextInfo(title= title,
+                      text=htext,
+                      xpos=wt_x, ypos=wt_y)
+         
 
     def arrange_control(self):
         """ Create arrangement window
@@ -394,7 +466,7 @@ if __name__ == "__main__":
         
     # root window created. Here, that would be the only window, but
     # you can later have windows within windows.
-    mw = Tk()
+    mw = tk.Tk()
     def user_exit():
         print("user_exit")
         exit()
