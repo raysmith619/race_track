@@ -6,7 +6,6 @@ Uses RoadBlock parts
 from enum import Enum
 import copy
 from homcoord import *
-from tkinter import *
 
 from select_trace import SlTrace
 from select_error import SelectError
@@ -97,6 +96,7 @@ class RoadTrack(BlockPanel):
         """ Add next entry
         :entries: single or list of entities (cars,roads) 
         :origin: origin of block, if not already specified in entry starting point
+        :returns: True iff successful
         """
         if not isinstance(entries, list):
             entries = [entries]
@@ -109,12 +109,13 @@ class RoadTrack(BlockPanel):
             else:
                 self.cars[entry.id] = entry
             self.id_blocks[entry.id] = entry
-
+        return True
 
     def remove_entry(self, entries_ids, release=True):
         """ Remove entry(s) from track
         :entries_ids: entries/ids
         :release: release resources (so it can't be readded/displayed
+        :returns: True iff successful
         """
         if not isinstance(entries_ids, list):
             entries_ids = [entries_ids]     # list of one
@@ -142,7 +143,7 @@ class RoadTrack(BlockPanel):
                     if release:
                         car.remove_display_objects()
                     del self.cars[entry_id]
-             
+        return True     
             
     def display(self):
         """ Display thing as a list of components
@@ -370,13 +371,13 @@ if __name__ == "__main__":
     chk_width = .05
     chk_height = .05
     
-    '''
+    
     chk_pos = Pt(.5,.5)     # HACK to see it
     chk_width = .5
     chk_height = .5
-    '''
     
-    '''check_box = BlockCheck(container=tR, tag="check", width=chk_width,
+    
+    check_box = BlockCheck(container=tR, tag="check", width=chk_width,
                            height=chk_height, position=chk_pos,
                            fill1="black", fill2="white")
     tR.comps.append(check_box)
@@ -391,7 +392,7 @@ if __name__ == "__main__":
                              position=pos1)
     tR.add_roads(straight_road1)    
     tR.display()
-    '''
+    
     early_stop = True
     ###early_stop = False
     if early_stop:

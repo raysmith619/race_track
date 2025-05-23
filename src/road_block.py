@@ -305,6 +305,20 @@ class RoadBlock(BlockBlock):
             rot2 = rot
         return rot2
 
+    def chg_in_front_rotation(self, new_rotation):
+        """ Get change in rotation from current direction to new direction
+        :new_rotation: direction our addon to a new block rotation
+        :returns: rotation between 0 and 360 to get new_rotation
+        """
+        return (new_rotation-self.get_front_addon_rotation())%360
+
+    def get_front_addon_rotation(self):
+        """ Get rotation for a forward "addon" block
+        :returns: rotation of addon block in containers reference
+                    None if no rotation, treated as 0. deg
+        """
+        return  self.get_rotation()
+
     def is_front_of(self, road, rotation_diff=.0001, position_diff=.0001):
         """ Determine if we are placed so as to be exactly in front of road
         :road: candidate back road

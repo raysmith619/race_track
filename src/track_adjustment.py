@@ -297,6 +297,10 @@ class TrackAdjustment:
         """ Display distinctly track building control
         Esentially the control will appear as a block over
         the existing selected block.
+        
+        Sets race_track.track_adjustment = self(RaceTrack)
+        to mark it so race track can see track
+        
         The operations are:
           1. Mouse down motion in the direction of the block
           will create a new straight block at the head of the
@@ -315,12 +319,19 @@ class TrackAdjustment:
         :block: around which the selections are placed - close to their possible placement
         :returns: True iff OK
         """
+        show_adjustments = False
+        if not show_adjustments:
+            return True
+        
         race_track = self.race_track
         if race_track.track_adjustment is not None:
             self.remove_markers()
         self.block = block              # Make new focus
         SlTrace.lg("\nshow_track_adjustments: block: %s coords:%s" % (block, block.get_coords()))
         self.change_key_state(race_track.key_state)
+        if self.adj_block is None:
+            return True
+        
         adj_coords = self.adj_block.get_adj_coords(AdjChoice.FORWARD) 
         race_track.move_cursor(x=adj_coords[0], y=adj_coords[1])
         self.highlight(self.adj_block, x=adj_coords[0], y=adj_coords[1])
@@ -332,22 +343,33 @@ class TrackAdjustment:
         """ Change key state / view
         :key_state:  new state
         """
+        block = self.block
+        new_type = RoadStraight
+        new_block = self.race_track.front_place_type(
+            block, new_type, grouped=False, width=block.get_width(),
+            height=block.get_length(),
+            color="pink")
+
+        '''
         race_track = self.race_track
         self.remove_markers(keep_adj=True)
         block = self.block
         if race_track.key_state == KeyState.EXTEND_ROAD or race_track.key_state == KeyState.ADD_ROAD:
             adj_block = race_track.front_place_type(block, BlockPointer, grouped=False, width=block.get_width(),
                                                     height=block.get_length(),
-                                                    color="pink")
+                                                    color="pink",
+                                                    display_only=True)
         else:
             adj_block = race_track.front_place_type(block, BlockCross, grouped=False, width=block.get_width(),
                                                     height=block.get_length(),
-                                                    color="orange")
+                                                    color="orange",
+                                                    display_only=True)
         self.adj_block = adj_block
         block.display()
-        adj_block.display()
+        if adj_block is not None:
+            adj_block.display()
         self.adj_block = adj_block
-        
+        '''        
 
 
     def snap_shot(self, save=True):

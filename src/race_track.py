@@ -2,6 +2,19 @@
 """
 Basis of a race track
 Includes RoadTrack with road and car bins
+
+Keyboard control
+key_down, key_release
+Processing routines are bound to functions in block_mouse.py (BlockMouse)
+
+key_down and key_release are overridden in this file,
+race_track (RaceTrack) based on RoadTrack, BlockMouse
+
+key states are available in
+    self.ctrl_down
+    self.alt_down
+    self.shift_down
+
 """
 from datetime import date
 import winsound
@@ -11,6 +24,7 @@ from homcoord import *
 from select_trace import SlTrace
 from select_error import SelectError
 
+from race_track_command_manager import RaceTrackCommand
 from road_block import RoadBlock
 from road_track import RoadTrack
 from road_straight import RoadStraight
@@ -18,12 +32,13 @@ from road_turn import RoadTurn
 from road_panel import RoadPanel
 from car_block import CarBlock
 from car_simple import CarSimple
+from block_pointer import BlockPointer
 from block_block import BlockBlock
 from block_mouse import BlockMouse
 from car_race import CarRace
 from track_adjustment import TrackAdjustment, KeyState
 from block_commands import BlockCommands, car
-
+from race_track_command_manager import RaceTrackCommandManager
 
 class TRLink:
     def __init__(self, block, id_front=None, id_back=None):
@@ -88,6 +103,8 @@ class RaceTrack(RoadTrack, BlockMouse):
             set width, height to pixel(absolute)
         """
         self.race_way = race_way
+        self.command_manager = RaceTrackCommandManager(self)
+        RaceTrackCommand.set_manager(self.command_manager)
         if bin_thick is None:       # None doesn't evaluate to default
             bin_thick = 50
         self.bin_thick = bin_thick
@@ -131,7 +148,18 @@ class RaceTrack(RoadTrack, BlockMouse):
         self.set_reset()        # Set reset state - can be changed
         self.set_snap_stack = []
 
+    def command_stack_str(self):
+        """ Return command_stack as string
+        :returns: command_stack as string
+        """
+        return self.command_manager.command_stack_str()
 
+    def command_undo_stack_str(self):
+        """ Return command undo_stack as string
+        :returns: undo command_stack as string
+        """
+        return self.command_manager.command_undo_stack_str()
+    
     def set_window_size(self, width=None, height=None,
                       bin_offset=2):
         """ Size/Resize track to fit in window
@@ -485,8 +513,63 @@ class RaceTrack(RoadTrack, BlockMouse):
 
     def is_alt_down(self):
         return self.alt_down
-    
-    
+
+    def add_on_road(self, road_block, new_rotation=None,
+                    over_road_ok=False):
+        """ Add on road section to front of existing road section
+        based on existing block and new rotation.
+        :road_block: starting block
+        :new_rotation: add_on's rotation
+        :returns: addon road block
+        """
+        chg2road = {0:"straight", 90:"left_turn", 180:"backup", 270: "right_turn"}
+        chg_rotation = road_block.chg_in_front_rotation(new_rotation)
+        new_road = None
+        max_diff = .5   # close
+        for chg_key in chg2road:
+            if abs(chg_rotation-chg_key) < max_diff:
+                new_road = chg2road[chg_key]
+                break
+        if new_road is None:
+            new_road = "straight"
+            errmsg = (f"Change in rotation {chg_rotation} from {road_block.get_addon_rotation()}"
+                       f" to {new_rotation} not supported"
+                       f" using {new_road}")
+            raise SelectError(errmsg)
+        if new_road == "backup":            
+            self.undo_cmd()
+            return
+
+        modifier = None        
+        if new_road == "straight":
+            new_type = RoadStraight
+        elif new_road == "left_turn":
+            new_type = RoadTurn
+            modifier = "left"
+        elif new_road == "right_turn":
+            new_type = RoadTurn
+            modifier = "right"
+        else:
+            raise SelectError(f"Unsupported new_road:{new_road}")
+
+        if self.road_room_check(road_block, road_type=new_type,
+                                modifier=modifier, over_road_ok=over_road_ok):            
+            self.front_add_type(front_block=road_block, new_type=new_type,
+                            modifier=modifier)
+        else:
+            raise SelectError(f"No room to add {new_type} modifier: {modifier} to {road_block}")
+        
+    def key2rotation(self, key=None):
+        """ Translate direction key to rotation direction
+        :key: key for direction
+        """    
+        key2d = {'Up':0, 'Left': 90., 'Down':180., 'Right':270.}
+        if key not in key2d:
+            raise SelectError("Unsupported rotation/direction key:%s" % key)
+             
+        return key2d[key]  
+
+        
     def key_down(self,event):
         key = event.keysym
         state = event.state
@@ -507,12 +590,29 @@ class RaceTrack(RoadTrack, BlockMouse):
         else:
             self.shift_down = False
 
+        if key in ['Up', 'Down', 'Left', 'Right']:
+            sbs = self.get_selected_blocks(origin='road_track')
+            ### TBD - restrict to roads
+            if len(sbs) > 0:
+                sb = sbs[-1]    # Get last selected
+                new_rotation = self.key2rotation(key)
+                self.add_on_road(sb, new_rotation=new_rotation)
+                return
+            
         if key.lower() == "g":
             self.snap_shot()
             self.race_start()
             return
+
+        if key.lower() == "k":
+            SlTrace.lg(f"\nCommandStack(key-k): {self.command_stack_str()}")
+            return
+
+        if key.lower() == "j":
+            SlTrace.lg(f"\nUndoCommandStack(key-j): {self.command_undo_stack_str()}")
+            return
         
-        if key.lower() == "r":
+        if key.lower() == "x":
             self.snap_shot()
             self.reset_cmd()
             return    
@@ -520,6 +620,16 @@ class RaceTrack(RoadTrack, BlockMouse):
         if key.lower() == "s":
             self.snap_shot()
             self.race_pause()
+            return    
+        
+        if key.lower() == "r":
+            if not self.redo_cmd():
+                SlTrace("Redo failed")
+            return    
+        
+        if key.lower() == "u":
+            if not self.undo_cmd():
+                SlTrace.lg("Undo failed")
             return    
 
         if key == "space":
@@ -994,8 +1104,10 @@ class RaceTrack(RoadTrack, BlockMouse):
             self.set_selected(new_block.id, keep_old=True)
         if display:
             new_block.display()
-        if select and issubclass(type(block), RoadBlock):
-            self.show_track_adjustments(new_block, x=x, y=y)
+        saved_extender_markers = True
+        if saved_extender_markers:
+            if select and issubclass(type(block), RoadBlock):
+                self.show_track_adjustments(new_block, x=x, y=y)
         return new_block        
 
     def move_to_track(self, block, bin_x=None, bin_y=None):
@@ -1068,12 +1180,16 @@ class RaceTrack(RoadTrack, BlockMouse):
         """
         if self.race_way is not None:
             self.race_way.snap_shot_restore(snap)
+
+    def print_command_stack(self):
+        SlTrace.lg(self.command_manager.command_stack_str())
             
     def pos_change_control_proc(self, change):
         """ Part position change control processor
         :change: identifier (see PositionWindow)
         """
         if change == "undo_cmd":
+            self.print_command_stack()
             return self.undo_cmd()
         
         if change == "redo_cmd":
@@ -1269,22 +1385,34 @@ class RaceTrack(RoadTrack, BlockMouse):
             SlTrace.lg(f"RaceTrack has None 'race_way'")
             return False
         
-        res = self.race_way.undo_cmd()
+        res = self.command_manager.undo()
         self.display()
         return res
 
     def redo_cmd(self):
-        res = self.race_way.redo_cmd()
+        res = self.command_manager.redo()
         self.display()
+        SlTrace.lg(f"After redo: {self.command_stack_str()}")
         return res
-    
+
     def remove_entry(self, entries):
-        """ Delete cars/roads from race_track
-        :entries: track entries/ids to remove
+        """ Remove track entries
+        :entries: a entry or list of entries
+        """
+        rt_cmd = RaceTrackCommand(entries, type="remove_entry")
+        rt_cmd.do_cmd()
+
+
+    def remove_entry_cmd(self, rt_cmd):
+        """ Delete cars/roads from race_track command
+        :rt_cmd: (RaceTrackCommand)
+        :returns: True iff successful
         """
         road_track = self.get_road_track()
         if road_track is None:
-            return          # No track
+            return False          # No track
+        
+        entries = rt_cmd.entries        # Obtain entries from command
                                             # Remove cars from any races
         if not isinstance(entries, list):
             entries = [entries]         # Make a list of one
@@ -1305,7 +1433,7 @@ class RaceTrack(RoadTrack, BlockMouse):
                 if len(new_races) != self.races:
                     self.races = new_races      # Update with new list
                        
-        road_track.remove_entry(entries)
+        return road_track.remove_entry(entries)
                         
             
     def back_add_type(self, new_type=None, modifier=None):
@@ -1404,15 +1532,21 @@ class RaceTrack(RoadTrack, BlockMouse):
     def front_place_type(self, front_block,
                         new_type=None,
                         grouped=True,
-                        modifier=None, display=False, xkwargs=None, **kwargs):
+                        modifier=None, display=True,    # TFD force display
+                        display_only=False,
+                        xkwargs=None, **kwargs):
         """ Add road to front end(top end of most recently selected)
             TBD: Possibly changed to determine end of physically connected string
             Supports Road types, Car types
             :grouped: Add to current group default: True
+            :display_only: True - display_only command
+                        default: False - standard cmd 
             :display: true => display
             :kwargs: args passed to object construction
             :returns: created object
         """
+        if new_type == BlockPointer:
+            return None
         
         add_pos = front_block.get_front_addon_position()
         add_rot = front_block.get_front_addon_rotation()
@@ -1421,21 +1555,29 @@ class RaceTrack(RoadTrack, BlockMouse):
             new_block.set_position(add_pos)   # Small optimization
         if add_rot != new_block.get_rotation():
             new_block.set_rotation(add_rot)   # Small optimization
-        self.add_entry(new_block, grouped=grouped)
+        self.add_entry(new_block, grouped=grouped, display_only=display_only)
         if display:
             new_block.display()
         return new_block
         
-    def add_entry(self, entries, grouped=True):
+    def add_entry(self, entries, grouped=True, display_only=False):
         """ Add cas/roads to track
         :entries: car/roads to add
         :grouped: Add to current group
+        :display_only: True - add display only entries
+                    default: False - standard entries
         """
-        if grouped:
-            self.add_to_group(entries)
-        self.road_track.add_entry(entries)
+        rt_cmd = RaceTrackCommand(entries, type="add_entry",
+                                  grouped=grouped, display_only=display_only)
+        rt_cmd.do_cmd()
 
-
+    def add_entry_cmd(self, rt_cmd):
+        """ execute add_entry
+        """
+        if rt_cmd.grouped:
+            self.add_to_group(rt_cmd.entries)
+        return self.road_track.add_entry(rt_cmd.entries)
+                
     def add_to_group(self, entries, group_index=None):
         """ Add road/car to group
         :entries: one/list of road/cars to be added

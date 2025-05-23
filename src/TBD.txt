@@ -1,0 +1,16 @@
+TBD.txt
+Ideas to follow
+Online Help
+    Rendering README.md files
+    render-html 1.0.1
+    pip install render-html
+
+o render Markdown, you can use various tools and methods. You can either use a Markdown application to convert Markdown to HTML, or you can use a browser extension or online service to view Markdown files. Alternatively, you can integrate Markdown rendering into your applications or websites using libraries and frameworks like Remark.js for React. 
+Here's a breakdown of common approaches:
+1. Markdown Applications:
+Create a Markdown file (e.g., with a .md extension) using a text editor or a dedicated Markdown application.
+Open the Markdown file in a Markdown application.
+The application will convert the Markdown file to HTML, which you can then view in a browser or use the application to convert it to other formats like PDF. 
+2. Browser Extensions/Online Services:
+You can install browser extensions like Markdown Reader to render Markdown files within your browser. 
+Many online services and websites also offer Markdown rendering capabilities. 

@@ -65,11 +65,11 @@ class BlockMouse:
     
     
     def key_down(self, event):
-        SlTrace.lg("key_down")
+        SlTrace.lg("key_down - SHOULD BE OVERRIDDEN")
         
         
     def key_release(self, event):
-        SlTrace.lg("key_release")
+        SlTrace.lg("key_release - SHOULD BE OVERRIDDEN")
         
         
     def mouse_down (self, event):

@@ -141,7 +141,7 @@ class BlockWindow(tk.Frame):
         win_width = self.master.winfo_width()
         win_height = self.master.winfo_height()
         self.set_prop_val("win_x", win_x)
-        self.set_prop_val("win_y", win_x)
+        self.set_prop_val("win_y", win_y)
         self.set_prop_val("win_width", win_width)
         self.set_prop_val("win_height", win_height)
     

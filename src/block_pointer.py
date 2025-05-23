@@ -194,17 +194,31 @@ class BlockPointer(BlockPolygon):
 
 
 if __name__ == "__main__":
-    from tkinter import *
+    import tkinter as tk
     
+    done = None
+    root = tk.Tk()
+    def cancel():
+        global done
+        done = True
+
+    
+    def wait(msec):
+        global done
+        done = False
+        root.after(msec, cancel)
+        while not done:
+            root.update()
+        
     def test1():    
         from block_block import BlockBlock
         from block_text import BlockText
         
         width = 600
         height = 600        
-        frame = Frame(width=width, height=height, bg="", colormap="new")
+        frame = tk.Frame(width=width, height=height, bg="", colormap="new")
         frame.pack()
-        canvas = Canvas(frame, width=width, height=height)
+        canvas = tk.Canvas(frame, width=width, height=height)
         canvas.pack()
         position = Pt(.5,.5)
         rotation = None
@@ -227,8 +241,9 @@ if __name__ == "__main__":
             color = colors[nb]
             box = BlockPointer(container=bP, width=box_width, height=box_height, position=box_pos, rotation=box_rot, color=color)
             bP.comps.append(box)
-        bP.display()
+            bP.display()
+            wait(500)
             
-        mainloop()
 
     test1()
+    tk.mainloop()

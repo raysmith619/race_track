@@ -47,24 +47,11 @@ class RaceWay(BlockBlock):
     
     def undo_cmd(self):
         SlTrace.lg("undo_cmd")
-        if not self.snap_shot_undo_stack:
-            SlTrace.lg("Can't undo")
-            return False
-        redo_snap = self.snap_shot(save=False)   # save for redo
-        snap = self.snap_shot_undo_stack.pop()
-        self.snap_shot_restore(snap)
-        self.snap_shot_redo_stack.append(redo_snap)
-        return True
+        return self.race_track.undo_cmd()
 
     def redo_cmd(self):
         SlTrace.lg("redo_cmd")
-        if not self.snap_shot_redo_stack:
-            SlTrace.lg("Can't redo")
-            return False
-        self.snap_shot()        # So subsequent undo will undo this redo
-        snap = self.snap_shot_redo_stack.pop()
-        self.snap_shot_restore(snap)
-        return True
+        return self.race_track.redo_cmd()
 
     def snap_shot(self, save=True):
         """ snap shot of race_track state
