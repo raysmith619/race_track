@@ -21,7 +21,7 @@ from block_block import BlockBlock,BlockType
 from block_polygon import BlockPolygon
 from road_block import RoadBlock,SurfaceType
 from road_straight import RoadStraight
-from race_way import RaceWay
+from race_track import RaceTrack
 from road_bin_setup import RoadBinSetup
 from car_bin_setup import CarBinSetup
 from road_track_setup import RoadTrackSetup
@@ -54,7 +54,7 @@ parser = argparse.ArgumentParser()
 dispall = False      # Display every change
 track_file = r'..\crsrc\double_circled.crsrc'
 starter_track = True
-starter_track = False
+#starter_track = False
 update_interval = .02
 bind_key = True             # Key binding enabled default: True
 race_track_src_dir = "../crsrc"  # Race track source directory
@@ -104,6 +104,13 @@ def play_exit():
     ###ActiveCheck.clear_active()  # Disable activities
     pgm_exit()
 
+tR = None   # race way, set when created
+def race_window_resize(app):
+    """ Race way window resize
+    :app: app (BlockWindow)
+    """
+    if tR is not None:
+        tR.race_window_resize(app)
 
 mw = tk.Tk()        
 app = BlockWindow(master=mw,
@@ -112,7 +119,8 @@ app = BlockWindow(master=mw,
                 cmd_proc=True,
                 cmd_file=None,
                 arrange_selection=False,
-                game_control=None
+                game_control=None,
+                changing_size_proc=race_window_resize,
                 )
 frame = tk.Frame(app, width=width, height=height, bg="", colormap="new")
 frame.pack(fill=tk.BOTH, expand=tk.YES)
@@ -129,7 +137,9 @@ if pos_x is not None or pos_y is not None:
         pos_y = 0.
     position = Pt(pos_x, pos_y)
 
-tR = RaceWay(mw=mw, canvas=canvas, width=th_width, height=th_height,
+tR = RaceTrack(mw=mw,
+               canvas=canvas,
+               width=th_width, height=th_height,
                position=position,
                bind_key=bind_key,
                cv_width=width, cv_height=height,

@@ -12,7 +12,7 @@ from select_error import SelectError
 from race_track import RaceTrack
 from block_block import BlockBlock
 
-class RaceWay(RaceTrack):
+class RaceWay(BlockBlock):
     """
     Race track 
     which can be used to construct a track plus road, track bins

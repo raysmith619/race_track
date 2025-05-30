@@ -89,20 +89,18 @@ class RaceTrack(RoadTrack, BlockMouse):
     """
             
     def __init__(self,
-                race_way,
-                mw=None,
-                bin_thick=50,           # Bin thickness in pixels, 0 => no bins
-                **kwargs
-                ):
+            mw=None,
+            canvas=None,
+            bin_thick=50,           # Bin thickness in pixels, 0 => no bins
+            update_interval=None,
+            **kwargs,       # Passed to race_road
+            ):
         """ Setup track plus bin
-        :race_way: link to over race way, including
-                    track Do/Undo support storage
         :bin_thick: bin thickness, in_pixels 0 => no bins
         :update_interval: display update interval (sec)
         if container is None:
             set width, height to pixel(absolute)
         """
-        self.race_way = race_way
         self.command_manager = RaceTrackCommandManager(self)
         RaceTrackCommand.set_manager(self.command_manager)
         if bin_thick is None:       # None doesn't evaluate to default
@@ -123,8 +121,13 @@ class RaceTrack(RoadTrack, BlockMouse):
         self.shift_down = False
         self.bin_selection = None       # Block to duplicate in track
         self.bin_selected = False       # True ==> clicks on track add duplicate
-        super().__init__(**kwargs)
         canvas = self.get_canvas()
+        RoadTrack.__init__(self, canvas=canvas,
+                           **kwargs)
+        mkw = {}
+        if 'bind_key' in kwargs:
+            mkw['bind_key'] = kwargs['bind_key']
+        BlockMouse.__init__(self, **mkw)
         if canvas is None:
             self.canvas = Canvas(width=self.cv_width, height=self.cv_height)
         self.road_groups = [{}]    # Each group is list of roads by block id
@@ -132,8 +135,6 @@ class RaceTrack(RoadTrack, BlockMouse):
         self.key_state = KeyState.ADD_ROAD
         self.move_cursor_x = 0
         self.move_cursor_y = 0
-        
-        BlockMouse.__init__(self)
         # Calculate bin dimensions, as fractions of canvas
         # Attempt to give fixed bin thickness
         bin_offset = 2.         # Offset from edge
@@ -504,6 +505,12 @@ class RaceTrack(RoadTrack, BlockMouse):
             if self.get_cv_width() > 1000.:
                 SlTrace.lg("Increased cv_width: %.2f" % self.get_cv_width())
             self.road_track.display()
+
+    def race_window_resize(self, app):
+        """ Race way window resize
+        :app: app (BlockWindow)
+        """
+        SlTrace.lg(f"race_track.race_window_resize  {app.changing_height = }  {app.changing_width = }")
 
     def is_ctrl_down(self):
         return self.ctrl_down
@@ -1169,17 +1176,15 @@ class RaceTrack(RoadTrack, BlockMouse):
         implement simple do/undo
         :save: if True, save snap shot on undo stack
         :returns: snap shot of state
+        REMOVED
         """
-        if self.race_way is not None:
-            snap = self.race_way.snap_shot(save=save)
-        return snap
+        return None
         
     def snap_shot_restore(self, snap):
         """ Restore state from snap shot
         :snap: snap shot of state
+        REMOVED
         """
-        if self.race_way is not None:
-            self.race_way.snap_shot_restore(snap)
 
     def print_command_stack(self):
         SlTrace.lg(self.command_manager.command_stack_str())

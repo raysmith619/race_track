@@ -806,14 +806,14 @@ class BlockBlock:
 
     def get_length(self):
         """ Get length, relative to its container, of this block
-        :returns: relative rotation in degrees
+        :returns: relative length
         """
         length = 1. if self.height is None else self.height
         return length
 
     def get_width(self):
-        """ Get length, relative to its container, of this block
-        :returns: relative rotation in degrees
+        """ Get width, relative to its container, of this block
+        :returns: relative width
         """
         width = 1. if self.width is None else self.width
         return width

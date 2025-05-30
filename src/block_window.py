@@ -5,6 +5,8 @@ Program Level Menu control
 """
 import os
 import sys
+import time
+
 import tkinter as tk
 import textwrap
 
@@ -17,7 +19,6 @@ from scrolled_text_info import ScrolledTextInfo
 # class. Frame is a class from the tkinter module. (see Lib/tkinter/__init__)
 class BlockWindow(tk.Frame):
     CONTROL_NAME_PREFIX = "play_control"
-
     def __deepcopy__(self, memo=None):
         """ provide deep copy by just passing shallow copy of self,
         avoiding tkparts inside sel_area
@@ -39,10 +40,17 @@ class BlockWindow(tk.Frame):
                  game_control=None,
                  games=[],          # text, proc pairs
                  actions=[],
+                 changing_pause_time=.1,    # pause (sec) to indicate change is done
+                 changing_size_proc=None,
+
                  ):
         """ Setup window controls
         :arrange_selection: - incude arrangement controls
                         default: True
+        :size_chg_pause_time: pause (msec) to indicate change is done
+        :changing_size_proc: called when track changes size
+                with: changing_size_proc(self)
+                        infos: self.changing_width, self.changing_height
         """
         # parameters that you want to send through the Frame class. 
         tk.Frame.__init__(self, master)   
@@ -68,8 +76,17 @@ class BlockWindow(tk.Frame):
         self.init_window()
         self.file_save_proc = None
         self.file_load_proc = None
-
-    
+        
+        self.prev_width = None
+        self.prev_height = None
+        self.changing_pause_time = changing_pause_time
+        self.changing_size = False           # Look till resizing has stopped
+        self.changing_time = None           # Time of most recent size
+        self.changing_width = None          # new changed size
+        self.changing_height = None
+        self.changing_call_id = None
+        self.changing_size_proc = changing_size_proc
+        
     def set_file_save_proc(self, proc):
         """ Save File Menu save cmd
         :proc: Save file cmd
@@ -144,6 +161,49 @@ class BlockWindow(tk.Frame):
         self.set_prop_val("win_y", win_y)
         self.set_prop_val("win_width", win_width)
         self.set_prop_val("win_height", win_height)
+        now = time.time()
+        if self.changing_size:
+            #SlTrace.lg(f"{win_width = } {self.changing_width = } {win_height = } {self.changing_height = } ")
+            if win_width != self.changing_width and win_height != self.changing_height:
+                self.changing_width = win_width
+                self.changing_height = win_height                
+                self.changing_scale_after_pause()
+            else:
+                pass                # waiting for pause call back
+        elif self.prev_width is not None and self.prev_height is not None:
+            if win_width != self.prev_width or win_height != self.prev_height:
+                self.changing_size = True           # Look till resizing has stopped
+                self.changing_width = win_width
+                self.changing_height = win_height
+                self.changing_scale_after_pause()
+
+        self.prev_width = win_width
+        self.prev_height = win_height
+        SlTrace.lg(f"win_size_event: {win_width = } {win_height = }", "win_size_event")
+
+    def changing_scale_after_pause(self, pause_time=None, call_id=None):
+        """Set / reset changinging pause time out
+        :pause: call after pause in change (sec)
+        :call_id:  id returned from after
+            default: setup
+        """
+        if pause_time is None:
+            pause_time = self.changing_pause_time
+            
+        time_pause_msec = int(pause_time*1000)
+        if call_id is None:
+            call_id = self.changing_call_id
+        if call_id is not None:            
+            self.master.after_cancel(call_id)     # Cancel one in progress
+        self.changing_call_id = self.master.after(time_pause_msec, self.changing_track_scale)
+               
+    def changing_track_scale(self):
+        """ Scall drawing to window size change
+        """
+        self.changing_call_id = None
+        SlTrace.lg(f"changing_scale: { self.changing_width = } {self.changing_height}")
+        if self.changing_size_proc is not None:
+            self.changing_size_proc(self)                    
     
     def arrange_windows(self):
         """ Arrange windows

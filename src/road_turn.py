@@ -27,30 +27,29 @@ class RoadTurn(RoadBlock):
                   road at turn's start
       arc   Turn's arc, in degrees e.g. -90 ==> 90 degree left turn
          
-         Right Turn      
- 
-                                  
-                              *    *
+        Right Turn      
+                                               *
+                                         *     *
+                                    *          *
+                                *              *
+                             *                 *
+                           *                   *
+                         *                     *
+                        *                      *
+            position->  *********************
+                        | <-- road_width --> |
+
+
+        Left Turn      
+                (0,1)   *    *
                         *          *
-                    *              *
-                 *                 *
-                *                  *
-               *                   *
-               *                   *
-    position-> *********************
-               | <-- road_width --> |
-
-
-         Right Turn      
-               (0,1)   *    *
-                       *          *
-                       *              *
-                       *                 *
-                       *                  *
-                       *                   *
-                       *                   *
-    position-> (0,0)   ********************* (0,1)
-                       | <-- road_width --> |
+                        *              *
+                        *                 *
+                        *                  *
+                        *                   *
+                        *                   *
+    position-> (0,0)    ********************* (0,1)
+                        | <-- road_width --> |
 
 
 

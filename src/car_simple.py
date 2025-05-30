@@ -14,8 +14,8 @@ from block_arc import BlockArc
    
 class CarSimple(CarBlock):
     """
-    A Straight Part of a road 
-    which can be used to construct a road layout
+    Abstract two dimentional representation of a car.  Used
+    in simple car race.
     """
     
             

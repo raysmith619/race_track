@@ -390,7 +390,7 @@ if __name__ == "__main__":
     straight_road1 = RoadStraight(tR, tag="first_road",
                              rotation=rot1,
                              position=pos1)
-    tR.add_roads(straight_road1)    
+    tR.add_entry(straight_road1)    
     tR.display()
     
     early_stop = True
@@ -407,13 +407,13 @@ if __name__ == "__main__":
                              arc=turn_arc,
                              rotation=corn_rot1,
                              position=corn_pos1)
-    tR.add_roads(turn_road1)
+    tR.add_entry(turn_road1)
         
     straight_after_turn1 = RoadStraight(tR, tag="after_turn",
                              rotation=corn_rot1+turn_arc,
                              ###position=turn_road1.get_top_left())
                              position=straight_road1.get_top_left())      #Hack
-    tR.add_roads(straight_after_turn1)
+    tR.add_entry(straight_after_turn1)
     
     extend_rot1 = rot1
     extend_pos1 = straight_road1.get_relative_point(Pt(0,-1))     # before
@@ -421,7 +421,7 @@ if __name__ == "__main__":
     extend_road1 = RoadStraight(tR, tag="road_extend5",
                              rotation=extend_rot1,
                              position=extend_pos1)
-    tR.add_roads(extend_road1)
+    tR.add_entry(extend_road1)
     
     
     cir_pos = Pt(chk_pos.x+chk_pi_x, chk_pos.y+chk_pi_y)
@@ -462,7 +462,7 @@ if __name__ == "__main__":
     straight_road2 = RoadStraight(tR, tag="second_road",
                              rotation=rot2,
                              position=pos2)
-    tR.add_roads(straight_road2)    
+    tR.add_entry(straight_road2)    
     if dispall: tR.display()
     
     corn_rot2 = rot2
@@ -471,7 +471,7 @@ if __name__ == "__main__":
                              arc=turn_arc,
                              rotation=corn_rot2,
                              position=corn_pos2)
-    tR.add_roads(turn_road2)    
+    tR.add_entry(turn_road2)    
     if dispall: tR.display()
     
     extend_rot2 = rot2
@@ -479,7 +479,7 @@ if __name__ == "__main__":
     extend_road2 = RoadStraight(tR, tag="road_extend2",
                              rotation=extend_rot2,
                              position=extend_pos2)
-    tR.add_roads(extend_road2)    
+    tR.add_entry(extend_road2)    
     if dispall: tR.display()
 
     
@@ -488,7 +488,7 @@ if __name__ == "__main__":
     straight_road3 = RoadStraight(tR, tag="road3",
                              rotation=rot3,
                              position=pos3)
-    tR.add_roads(straight_road3)    
+    tR.add_entry(straight_road3)    
     if dispall: tR.display()
     
     corn_rot3 = rot3
@@ -497,7 +497,7 @@ if __name__ == "__main__":
                              arc=turn_arc,
                              rotation=corn_rot3,
                              position=corn_pos3)
-    tR.add_roads(turn_road3)    
+    tR.add_entry(turn_road3)    
     if dispall:  tR.display()
     
     extend_rot3 = rot3
@@ -505,7 +505,7 @@ if __name__ == "__main__":
     extend_road3 = RoadStraight(tR, tag="road_extend3",
                              rotation=extend_rot3,
                              position=extend_pos3)
-    tR.add_roads(extend_road3)    
+    tR.add_entry(extend_road3)    
     if dispall: tR.display()
 
     
@@ -514,7 +514,7 @@ if __name__ == "__main__":
     straight_road4 = RoadStraight(tR, tag="road4",
                              rotation=rot4,
                              position=pos4)
-    tR.add_roads(straight_road4)    
+    tR.add_entry(straight_road4)    
     if dispall:  tR.display()
     
     corn_rot4 = rot4
@@ -523,7 +523,7 @@ if __name__ == "__main__":
                              arc=turn_arc,
                              rotation=corn_rot4,
                              position=corn_pos4)
-    tR.add_roads(turn_road5)    
+    tR.add_entry(turn_road5)    
     if dispall:  tR.display()
     
     extend_rot4 = rot4
@@ -531,7 +531,7 @@ if __name__ == "__main__":
     extend_road4 = RoadStraight(tR, tag="road_extend4",
                              rotation=extend_rot4,
                              position=extend_pos4)
-    tR.add_roads(extend_road4)    
+    tR.add_entry(extend_road4)    
     if dispall:  tR.display()
  
     
@@ -540,7 +540,7 @@ if __name__ == "__main__":
     straight_road5 = RoadStraight(tR, tag="road5",
                             rotation=rot5,
                             position=pos5)
-    tR.add_roads(straight_road5)    
+    tR.add_entry(straight_road5)    
     if dispall: tR.display()
     
     corn_rot5 = rot5
@@ -549,7 +549,7 @@ if __name__ == "__main__":
                              arc=turn_arc,
                              rotation=corn_rot5,
                              position=corn_pos5)
-    tR.add_roads(turn_road5)    
+    tR.add_entry(turn_road5)    
     if dispall: tR.display()
     
     extend_rot5 = rot5
@@ -557,7 +557,7 @@ if __name__ == "__main__":
     extend_road5 = RoadStraight(tR, tag="road_extend5",
                              rotation=extend_rot5,
                              position=extend_pos5)
-    tR.add_roads(extend_road5)    
+    tR.add_entry(extend_road5)    
     tR.display()
     
     mainloop()
