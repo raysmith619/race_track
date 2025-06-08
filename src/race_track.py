@@ -24,6 +24,7 @@ from homcoord import *
 from select_trace import SlTrace
 from select_error import SelectError
 
+
 from race_track_command_manager import RaceTrackCommand
 from road_block import RoadBlock
 from road_track import RoadTrack
@@ -39,7 +40,8 @@ from car_race import CarRace
 from track_adjustment import TrackAdjustment, KeyState
 from block_commands import BlockCommands, car
 from race_track_command_manager import RaceTrackCommandManager
-
+from block_highlighting import BlockHighlighting
+ 
 class TRLink:
     def __init__(self, block, id_front=None, id_back=None):
         self.block = block
@@ -91,7 +93,7 @@ class RaceTrack(RoadTrack, BlockMouse):
     def __init__(self,
             mw=None,
             canvas=None,
-            bin_thick=50,           # Bin thickness in pixels, 0 => no bins
+            bin_thick=100,           # Bin thickness in pixels, 0 => no bins
             update_interval=None,
             **kwargs,       # Passed to race_road
             ):
@@ -110,6 +112,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         if mw is None:
             mw = Tk()
         self.mw = mw
+        self.block_highlighting = BlockHighlighting(self)
         self.motion_bind_id = None
         self.races = []
         self.car_bin = None             # Set if present
@@ -148,7 +151,8 @@ class RaceTrack(RoadTrack, BlockMouse):
                            bin_offset=bin_offset)
         self.set_reset()        # Set reset state - can be changed
         self.set_snap_stack = []
-
+        self.block_highlight = None # Highlighted entry
+        
     def command_stack_str(self):
         """ Return command_stack as string
         :returns: command_stack as string
@@ -511,7 +515,30 @@ class RaceTrack(RoadTrack, BlockMouse):
         :app: app (BlockWindow)
         """
         SlTrace.lg(f"race_track.race_window_resize  {app.changing_height = }  {app.changing_width = }")
+        diff_max = 2
+        if abs(app.changing_height - app.changing_width) > diff_max:
+            new_side = min(app.changing_height, app.changing_width)
+            width = height = new_side-20
+            geo_str = "%dx%d" % (width, height)
+            self.mw.geometry(geo_str)
 
+    def size_to_best(self, width=None, height=None, margin=5):
+        """ Size to square
+        :side: desired side
+            default: maximize based on window size
+        :margin: minimum distance from edge
+        """
+        diff_max = 2
+        if width is None:
+            width = self.mw.winfo_width()
+        if height is None:
+            height = self.mw.winfo_height()
+            
+        width = height = min(width, height) - margin
+            
+        geo_str = "%dx%d" % (width, height)
+        self.mw.geometry(geo_str)
+            
     def is_ctrl_down(self):
         return self.ctrl_down
 
@@ -790,10 +817,12 @@ class RaceTrack(RoadTrack, BlockMouse):
         x = self.move_cursor_x = event.x
         y = self.move_cursor_y = event.y
         SlTrace.lg("mouse_motion(x=%d y=%d" % (x,y), "mouse_motion")
-        tadj = self.track_adjustment
-        if tadj is not None:
-            tb = tadj.adj_block
-            tadj.highlight(tb, x=x, y=y)
+        ck_h = self.block_highlighting.check_for_change(
+                                x=x, y=y)
+        if not ck_h:
+            if self.block_highlighting.msg:
+                SlTrace.lg(self.block_highlighting.msg)
+            return
          
     def move_cursor(self, x=None, y=None):
         """ Move cursor, waiting till change completes
@@ -1364,6 +1393,10 @@ class RaceTrack(RoadTrack, BlockMouse):
             if self.track_adjustment is not None:
                 adj_block = self.track_adjustment.adj_block
             for entry in entries:
+                if entry == road_block:
+                    SlTrace.lg(f"Ignoring self: {road_block}")
+                    continue
+                
                 if adj_block is None or entry.id != adj_block.id:
                     SlTrace.lg("Would hit entry %s" % entry)
                     return False
@@ -1381,15 +1414,7 @@ class RaceTrack(RoadTrack, BlockMouse):
         return True
 
 
-    def undo_cmd(self):
-        if not hasattr(self, "race_way"):
-            SlTrace.lg(f"RaceTrack has no attr 'race_way'")
-            return False
-        
-        if self.race_way is None:
-            SlTrace.lg(f"RaceTrack has None 'race_way'")
-            return False
-        
+    def undo_cmd(self):        
         res = self.command_manager.undo()
         self.display()
         return res
@@ -1901,7 +1926,6 @@ if __name__ == "__main__":
     from tkinter import *    
     import argparse
     
-    from race_way import RaceWay
     from road_block import RoadBlock
     from road_turn import RoadTurn
     from block_arc import BlockArc
@@ -1950,8 +1974,7 @@ if __name__ == "__main__":
             pos_y = 0.
         position = Pt(pos_x, pos_y)
     
-    race_way = RaceWay()    
-    tR = RaceTrack(race_way, canvas=canvas, width=th_width,
+    tR = RaceTrack(canvas=canvas, width=th_width,
                    height=th_height,
                    bin_thick=bin_thick,
                    position=position,

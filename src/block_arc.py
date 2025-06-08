@@ -89,6 +89,12 @@ class BlockArc(BlockBlock):
             pts.append(pt)
         self.points = pts
 
+    def get_perimeter_points(self):
+        """ Returns a set of internal points (relative to this block)
+        usable for determining inside/outside
+        """
+        return self.points
+
 
     def __deepcopy__(self, memo):
         """ Hook to avoid deep copy where not appropriate

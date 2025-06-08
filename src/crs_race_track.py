@@ -155,7 +155,7 @@ pos_ctl = PositionWindow("Part Positioning",
 race_ctl = RaceControlWindow("Race Control",
                          command_control_proc=tR.race_control_proc)    
 road_bin = tR.get_road_bin()
-RoadBinSetup(road_bin)
+RoadBinSetup(tR, road_bin)
 select_road = True
 if select_road:
     road = road_bin.get_entry(0)            # Select first entry in road_bin
@@ -210,7 +210,7 @@ def load_track_proc():
 
 app.set_file_load_proc(load_track_proc)
 tR.enable_window_resize()
-
+tR.size_to_best()
 ###RoadBinSetup(road_track)
 tR.display()
 

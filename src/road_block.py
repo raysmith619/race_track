@@ -83,7 +83,7 @@ class RoadBlock(BlockBlock):
         self.front_road = front_road
         self.back_road = back_road
         super().__init__(container=container, **kwargs)        
-
+        self.highlight_tag = None
 
 
     def __deepcopy__(self, memo):
@@ -129,7 +129,18 @@ class RoadBlock(BlockBlock):
         mark_text = BlockText(container=self, position=(Pt(-.5,-.5)), text="%d" % self.id)
         self.comps.append(mark_text)
         self.display()
+
+    def highlight(self, color="green"):
+        """ Highlight block temporarly
+        :color: base color
+        """
+        if self.highlight_tag is not None:
+            self.canvas.delete(self.highlight_tag)
+        coords = self.get_perimeter_coords()
+        xkwargs = {'fill': color}
+        self.highlight_tag = self.get_canvas().create_polygon(coords, **xkwargs)
         
+                
     def get_road_track(self):
         top = self.get_top_container()
         return top
@@ -221,7 +232,7 @@ class RoadBlock(BlockBlock):
         :returns: modifier string
         """
         return ""
-            
+                
 
     def get_turn_speed(self):
         """ Get reduced speed for turns

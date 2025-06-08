@@ -6,7 +6,8 @@ from homcoord import *
 from select_trace import SlTrace
 from select_error import SelectError
 
-
+from block_block import BlockBlock
+from road_block import RoadBlock
 from road_straight import RoadStraight
 from road_turn import RoadTurn
 from road_straight import RoadStraight
@@ -15,9 +16,12 @@ from road_turn import RoadTurn
 
 
 class RoadBinSetup:
-    def __init__(self, road_bin):
+    def __init__(self, race_track, road_bin):
         """ Setup road bin with choices to add
+        :race_track: race track (RaceTrack) reference
+        :road_bin: bin of road choices
         """
+        self.race_track = race_track
         self.road_bin = road_bin
         
         SlTrace.lg("RoadBinSetup: road_bin pts: %s" % self.road_bin.get_absolute_points())
@@ -37,19 +41,27 @@ class RoadBinSetup:
                                  height=entry_height)
         SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
         self.add_entry(entry)
+        self.race_track.display()
         
         pos_turn = Pt(pos.x+entry_width+entry_space, entry_space)
         radius_turn = entry_width
         rot_turn = road_rot
-        entry = RoadTurn(self.road_bin,
+        entry_width = .3 #TFD
+        turn_box = RoadBlock(self.road_bin,
+                            position=pos_turn,
+                            height=entry_height,
+                            width=entry_width/2,
+                            rotation=road_rot)
+        
+        turn = RoadTurn(turn_box,
+                                 radius=1,
                                  arc=-90.,
-                                 rotation=rot_turn,
-                                 position=pos_turn,
-                                 width=entry_width/2,
-                                 height=entry_height)
-                                 
-        SlTrace.lg("entry pts: %s" % entry.get_absolute_points())
-        self.add_entry(entry)
+                                 rotation=rot_turn)
+        turn_box.add_components(turn)
+        self.add_entry(turn)    # So select won't hickup                                 
+        SlTrace.lg("turn pts: %s" % turn_box.get_absolute_points())
+        self.add_entry(turn_box)
+        self.race_track.display()
         pos += pos_inc
 
 

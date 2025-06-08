@@ -20,7 +20,6 @@ class RoadTurn(RoadBlock):
     Standard road turn
     which can be used in constructing a road layout
       start    Pt()  within container
-      width    road width usually defaulting to track road width
       radius   Outside radius of turn
       
       direction    Direction, in degrees counter clockwise, of
@@ -48,7 +47,7 @@ class RoadTurn(RoadBlock):
                         *                  *
                         *                   *
                         *                   *
-    position-> (0,0)    ********************* (0,1)
+    position-> (0,0)    ********************* (1,0)
                         | <-- road_width --> |
 
 
@@ -59,6 +58,8 @@ class RoadTurn(RoadBlock):
     def __init__(self,
                 track=None,
                 radius=None,
+                width=None,
+                height=None,
                 arc=-90.,
                 **kwargs
                 ):
@@ -66,6 +67,8 @@ class RoadTurn(RoadBlock):
         :track: Track object, container and controller of the road system
         :radius: radius, as fraction of container, to outside of road
                 default: 1
+        :width: optional width of road
+        :height: optional height of roae
         :arc: Amount, in degrees(counter clockwise), of circle default: 90 deg == left turn
         
         Create arc as polygon of points to facilitate coordinate transformation
@@ -77,11 +80,16 @@ class RoadTurn(RoadBlock):
         self.arc = arc
         super().__init__(track, road_type=RoadType.TURN, **kwargs)
         tag = self.tag
-        if self.width is None:
-            self.width = self.height = self.get_road_width()
-        if radius is None:
-            radius = self.width
+        if width is not None:
+            radius = width
+        elif height is not None:
+            radius = height
+        elif radius is not None:
+            width = height = radius
+        else:
+            radius = self.get_road_width()
         self.radius = radius
+        self.width = self.height = radius
         if arc >= 0:
             arc_cent = Pt(0,0)  # Left Turn
         else:
@@ -92,7 +100,7 @@ class RoadTurn(RoadBlock):
         edge_width = self.edge_width
 
         xkwargs = self.xkwargs
-        if xkwargs is None:
+        if xkwargs is None or len(xkwargs)==0:
             xkwargs = {'fill' : 'black'}
             
         turn = BlockArc(container=self,
@@ -103,7 +111,8 @@ class RoadTurn(RoadBlock):
                             arc=arc,
                             xkwargs=xkwargs)
         self.comps.append(turn)
-
+        self.turn = turn    # Used for perimeter calculation
+        
         median_strip = BlockRing(container=self,
                             tag=tag,
                             ###rotation=self.rotation-90,
@@ -142,6 +151,28 @@ class RoadTurn(RoadBlock):
         new_inst.arc = self.arc
         return new_inst
 
+
+    def get_perimeter_points(self):
+        """ Returns a set of internal points (relative to this block)
+        usable for determining inside/outside
+        """
+        return self.turn.get_perimeter_points()
+
+
+    ### TFD - should just be done via RoadBlock
+    def display(self):
+        """ Display thing as a list of components
+        """
+        if not self.visible:
+            return              # Skip if invisible
+        
+        SlTrace.lg("display %s: %s" % (self.get_tag_list(), self), "display")
+        for comp in self.comps:
+            comp.display()
+            self.task_update()
+            pass
+        
+        self.task_update()
 
     def __str__(self):
         str_str = self.__class__.__name__ + " id:%s" % self.id
@@ -284,4 +315,9 @@ class RoadTurn(RoadBlock):
             SlTrace.lg("turn:id: %3d (%.2f): start: %.2f rot: %.2f end: %.2f" %
                         (self.id, fract, start_rotation, rotation, end_rotation))
         return rotation
-        
+
+    def is_left(self):
+        """ Check if left turn
+        """
+        return self.arc < 0
+            

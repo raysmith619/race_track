@@ -16,6 +16,7 @@ class BlockType(Enum):
     LINE = 3
     ARC = 4
     CHECK = 5
+    REGION = 6
 
 def tran2matrix(tran):
     """ Display tran's matrix
@@ -34,7 +35,7 @@ class SelectInfo:
     
     def __init__(self, block=None, x_coord=None, y_coord=None, x_coord_prev=None,  y_coord_prev=None,
                  prev_select=None):
-        """ Selction info
+        """ Selection info
         :block: selected block
         :x_coord: x-coordinate on canvas
         :y_coord: y-coordinate
@@ -464,6 +465,7 @@ class BlockBlock:
                  origin=None,
                  selected=False,
                  state=None,
+                 edge=2,
                  xkwargs=None):
         """ Setup object
         :id:  Unique object id, default: created
@@ -488,6 +490,8 @@ class BlockBlock:
         :origin:  Origin/local of block/object e.g. road_bin, road_track, car_bin
         :selected: True iff object is selected default: False
         :state:   State of object e.g. "new", "moved"
+        :edge:  edge of figure
+                default=2
         :xkwargs:   optional canvas operation args (dictionary to avoid name
                                                     collisions)
         """
@@ -498,6 +502,8 @@ class BlockBlock:
         self.origin = origin            # Set by others
         self.selected = False
         self.state = state              # Set by others
+        self.edge = edge
+        self.tag = None
         if tag is None:
             tag = self.__class__.__name__
         self.tag = tag
@@ -527,7 +533,8 @@ class BlockBlock:
             if width is not None:               # Any scaling
                 width *= self.get_cv_width()          # Scale width to canvas
                 height *= self.get_cv_length()            
-                        
+        if position is None:
+            position = Pt(0,0)                
         self.position = position
         self.width = width
         self.height = height
@@ -899,6 +906,15 @@ class BlockBlock:
         """
         return [Pt(0,0), Pt(0,1), Pt(1,1), Pt(1,0)]
 
+    def get_pos_relative(self, x, y):
+        """ Get point relative to block
+        :x: canvas x
+        :y: canvas y
+        :returns: x,y (0-1 within block's containing rectangle)
+        """
+        ip = self.get_inverse_point(Pt(x,y))
+        return ip.x,ip.y
+    
     def get_perimeter_abs_points(self):
         """ Returns a set of coordinates (relative to this block)
         usable for determining inside/outside

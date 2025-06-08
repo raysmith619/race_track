@@ -25,7 +25,7 @@ class BlockMouse:
         self.canvas.bind ("<ButtonRelease-3>", self.mouse3_up)
         self.canvas.bind ( "<Enter>", self.mouse_enter)
         self.canvas.bind ("<Leave>", self.mouse_leave)
-        self.canvas.bind("<B1-Motion>", self.mouse_down_motion)
+        self.canvas.bind("<B1-Motion>", self.mouse_motion)
         self.canvas.bind("<B2-Motion>", self.mouse2_down_motion)
         self.canvas.bind("<B3-Motion>", self.mouse3_down_motion)
         self.mw.bind("<Motion>", self.motion)       # For generated events
@@ -85,6 +85,16 @@ class BlockMouse:
         pass
 
         
+    def mouse_motion (self, event):
+        """ mouse motion
+        OVERRIDDEN
+        """
+        ###cnv.itemconfigure (tk.CURRENT, fill ="blue")
+        cnv = event.widget
+        x,y = float(cnv.canvasx(event.x)), float(cnv.canvasy(event.y))
+        ###got = event.widget.coords (tk.CURRENT, x, y)
+        SlTrace.lg("move to x=%d y=%d" % (x,y), "motion_to")
+
     def mouse_down_motion (self, event):
         ###cnv.itemconfigure (tk.CURRENT, fill ="blue")
         cnv = event.widget
