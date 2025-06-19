@@ -71,6 +71,22 @@ class RoadStraight(RoadBlock):
         self.comps.append(right_edge)
 
 
+    def __repr__(self):
+        return self.__str__()
+
+
+    def __str__(self):
+        str_str = self.__class__.__name__ + " id:%s" % self.id
+        if hasattr(self, "front_road") and self.front_road is not None:
+            str_str += f" front_road:{self.front_road.id}"
+        if hasattr(self, "arc") and self.arc is not None:
+            str_str += " arc:%.0f" % self.arc
+        if hasattr(self, "origin") and self.origin is not None:
+            str_str += " in:%s" % self.origin
+        if hasattr(self, "state") and self.state is not None:
+            str_str += " state:%s" % self.state
+        return str_str
+
         
     def display(self):
         """ Display thing as a list of components

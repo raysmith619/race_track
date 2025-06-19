@@ -190,7 +190,7 @@ class RoadBlock(BlockBlock):
             return self.front_road
         
         if not allow_close:
-            SlTrace.lg("%s don's check for close" % (self))
+            SlTrace.lg("%s don't check for close" % (self))
             return None         # Don't allow close checking
     
         race_track = self.get_race_track()
@@ -222,7 +222,9 @@ class RoadBlock(BlockBlock):
                     coords = self.pts2coords(abs_pt)
                     SlTrace.lg("%s inside_pt %s rel_pt:%s abs_pt:%s coords:%s"
                                 % (self, inside_pt, rel_pt, abs_pt, coords))
-                    
+                SlTrace.lg(f"Don't link to self:{self.id = }")
+                return None
+                
             self.link_roads(front_road) # link roads
         return front_road
     

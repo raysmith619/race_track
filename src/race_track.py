@@ -552,6 +552,7 @@ class RaceTrack(RoadTrack, BlockMouse):
                     over_road_ok=False):
         """ Add on road section to front of existing road section
         based on existing block and new rotation.
+        Complete front_road, back_road
         :road_block: starting block
         :new_rotation: add_on's rotation
         :returns: addon road block
@@ -1527,8 +1528,8 @@ class RaceTrack(RoadTrack, BlockMouse):
         SlTrace.lg("\nfront_add_type: new_type:%s modifier:%s" %
                    (new_type, modifier), "add_block")
         new_block = self.front_place_type(front_block, new_type=new_type, modifier=modifier)
-        if front_block.origin == "road_track" and issubclass(type(new_block), CarBlock):
-            front_block.link_roads(new_block)
+        ###if front_block.origin == "road_track" and issubclass(type(new_block), CarBlock):
+        front_block.link_roads(new_block)
         SlTrace.lg("front_add_type: moved new_block:%s" % new_block, "add_block")
         SlTrace.lg("front_add_type: points:%s" % new_block.get_absolute_points(), "add_block")
         ###self.set_selected(new_block, keep_old=True)
@@ -1702,7 +1703,7 @@ class RaceTrack(RoadTrack, BlockMouse):
             
             road_list = self.get_road_list(road)    # Get roads connected to this road in order
             if not self.is_race_circuit(road_list):
-                SlTrace.lg("road_list is not a race circuit: %s" % road_list)
+                SlTrace.lg(f"road_list is not a race circuit: {road_list}")
                 return False
             
             race = CarRace(self, road_list=road_list)
@@ -1741,7 +1742,13 @@ class RaceTrack(RoadTrack, BlockMouse):
         while road is not None:
             if SlTrace.trace("front_road"):
                 SlTrace.lg("get_road_list: appending %s" % road)
-                SlTrace.lg("       coords: %s" % road.get_coords())
+                if (isinstance(road, RoadTurn)
+                    and SlTrace.trace("display_turn_coords")):
+                        SlTrace.lg("       coords: %s" % road.get_coords())
+            if road in road_list:
+                SlTrace.lg(f"road:{road} already in list\n{road_list} - quittig")
+                break
+            
             road_list.append(road)
             road_next = road.get_front_road()    
             if road_next is None:

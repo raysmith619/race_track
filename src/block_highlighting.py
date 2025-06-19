@@ -3,6 +3,8 @@
 Show interested block by blinking highlight over
 existing entry
 """
+from select_trace import SlTrace
+
 from homcoord import *
 from block_polygon import BlockPolygon
 from road_straight import RoadStraight
@@ -53,9 +55,9 @@ class BlockHighlighting:
             entry = entries[-1] if len(entries) > 0 else None
         else:
             entry = entries
-        if self.entry is not None and entry != self.entry:
+        if entry is not None and entry != self.entry:
             self.cancel()
-        self.entry = entry
+            self.entry = entry
         if entry is None:
             if self.entry is not None:
                 self.cancel()
@@ -118,6 +120,9 @@ class BlockHighlighting:
         
         """
         pos_within = self.entry.get_pos_relative(x=self.x, y=self.y)
+        if not hasattr(self.entry, "edge"):
+            SlTrace.lg("highlight_straight: missing attr entry.edge")
+            self.entry.edge = 2
         x_min = self.entry.edge
         x_max = 1. - self.entry.edge                   
         y_min = self.entry.edge

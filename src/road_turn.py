@@ -103,15 +103,14 @@ class RoadTurn(RoadBlock):
         if xkwargs is None or len(xkwargs)==0:
             xkwargs = {'fill' : 'black'}
             
-        turn = BlockArc(container=self,
+        self.turn = BlockArc(container=self,
                             tag=tag,
                             ###rotation=self.rotation-90,
                             center=arc_cent,
                             radius=1,
                             arc=arc,
                             xkwargs=xkwargs)
-        self.comps.append(turn)
-        self.turn = turn    # Used for perimeter calculation
+        self.comps.append(self.turn)
         
         median_strip = BlockRing(container=self,
                             tag=tag,
@@ -174,8 +173,13 @@ class RoadTurn(RoadBlock):
         
         self.task_update()
 
+    def __repr__(self):
+        return self.__str__()
+    
     def __str__(self):
         str_str = self.__class__.__name__ + " id:%s" % self.id
+        if hasattr(self, "front_road") and self.front_road is not None:
+            str_str += f" front_road:{self.front_road.id}"
         if self.arc is not None:
             str_str += " arc:%.0f" % self.arc
         if hasattr(self, "origin") and self.origin is not None:
