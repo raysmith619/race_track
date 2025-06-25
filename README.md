@@ -1,4 +1,5 @@
 # race_track
+## Introduction
 2D race track construction / operation game
 
 This program is written entirely in Python 3 and uses tkinter for graphics.
@@ -11,9 +12,11 @@ File excerpt.:
    # easily generate complex neuronal cultures.  
    # Copyright (C) 2017 SENeC Initiative
 ```
+## Installation
+ - Download this project
+ - Download resource_lib project
+ - Add resource_lib/src to python path.
 ## Running
-### Download project
-### Download resource_lib, linking to resource_lib/src
 ### Run race_trace/src/crs_race_track.py
 
 ## Background
