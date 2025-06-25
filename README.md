@@ -11,7 +11,12 @@ File excerpt.:
    # easily generate complex neuronal cultures.  
    # Copyright (C) 2017 SENeC Initiative
 ```
+## Running
+### Download project
+### Download resource_lib, linking to resource_lib/src
+### Run race_trace/src/crs_race_track.py
 
+## Background
 Facilitate game player in desiging and operation of two dimentional race track with two dimensional vehicles.
 This game is the author's attempt in the development of a layered design of objects.  The botom layer contains objects which can be drawn directly via canvas operations.  Currently lowest level object is a polygon with a set of points.  Each object, except the top, has a container object.  The object is expressed in terms of the container object.  Where appropriate the object's position, rotation, height, width are expressed as a fraction of the containers attributes.  It is hoped that with this generalization, objects can be easily developed.  The general object display process entails the obtaining the objects container tree, and from that, the series of coordinate transformation matices, generating a composite transformation matrix and applying this matrix against each of the object's points.  It is hoped that the efficiency of collapsing the transformations in to a single matrix multiplication per point will save time.
 
