@@ -38,6 +38,28 @@ class BlockPolygon(BlockBlock):
                 
         return new_inst
 
+    
+    def over_us(self, point=None, coord=None, event=None):
+        """ Determine if any point, coordinate, or event is inside our border
+            First pass succeeds
+            :point: point (Pt)
+            :coord: coordinate pair
+            :event: mouse event
+        """
+        if point is not None:
+            return True         # TFD 
+
+        if coord is not None:
+            pt = self.coords2pts([coord[0], coord[1]])[0]
+            return self.over_us(point=pt)
+        
+        if event is not None:
+            cnv = event.widget
+            x,y = float(cnv.canvasx(event.x)), float(cnv.canvasy(event.y))
+            pt = self.coords2pts([x,y])[0]
+            return self.over_us(point=pt)
+        
+        return False
 
  
     def display(self):
@@ -145,6 +167,33 @@ def add_poly(container,
     if display:
         container.display()
     SlTrace.lg("component Added")
+    
+    def over_us(self, point=None, coord=None, event=None):
+        """ Determine if any point, coordinate, or event is inside our border
+            First pass succeeds
+            :point: point (Pt)
+            :coord: coordinate pair
+            :event: mouse event
+        """
+        if point is not None:
+            if self.is_rect:
+                return self.over_rect(point)
+            
+            if self.is_arc:
+                return self.over_arc(point)
+            
+            return False        # Ignore others
+        if coord is not None:
+            pt = self.coords2pts([coord[0], coord[1]])[0]
+            return self.over_us(point=pt)
+        
+        if event is not None:
+            cnv = event.widget
+            x,y = float(cnv.canvasx(event.x)), float(cnv.canvasy(event.y))
+            pt = self.coords2pts([x,y])[0]
+            return self.over_us(point=pt)
+        
+        return False
 
         
 if __name__ == "__main__":

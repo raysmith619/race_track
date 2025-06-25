@@ -84,7 +84,7 @@ class BlockHighlighting:
             raise SelectError(f"Don't know how to highlight {entry}")
         
     def highlight_straight(self):
-        """ Highlight strait based on what can be done
+        """ Highlight straight based on what can be done
         Selection areas, with addon road types
                          x_1                   x_2
         #########################################################                                                       X
@@ -136,14 +136,16 @@ class BlockHighlighting:
         
         position = Pt(x_min,y_min)
         xkwargs = {}
-        left_turn_select = BlockPolygon(
+        '''left_turn_select = BlockPolygon(
             container=self.entry,
             tag=self.tag,
             position=position,
             points=[position,
                     Pt(x_min, y_max), Pt(x_max, y_max), Pt(x_max,y_min)],
             **xkwargs)
-
+        if left_turn_select.over_us(position):
+            left_turn_select.display()
+        '''    
 
     def highlight_left_turn(self):
         """ Highlight left turn on what can be done
